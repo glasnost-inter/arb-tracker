@@ -1,0 +1,65 @@
+{
+  "project": {
+    "id": "arb-tracker-v1",
+    "name": "ARB Tracker",
+    "version": "1.0.0",
+    "stack": {
+      "framework": "Next.js",
+      "styling": "Tailwind CSS",
+      "database": "SQLite (via Prisma)"
+    },
+    "integrations": {
+      "context7": {
+        "enabled": true,
+        "apiKeyEnvVar": "CONTEXT7_API_KEY",
+        "sync": {
+          "strategy": "on-demand",
+          "auto_enrich": true
+        }
+      }
+    }
+  },
+  "blueprints": {
+    "frontend": {
+      "framework": "Next.js",
+      "root": "apps/web",
+      "style": "tailwind",
+      "ui_standard": "expansive-landscape-modals",
+      "components": {
+        "modal": {
+          "default_width": "80vw",
+          "orientation": "landscape",
+          "image_fit": "contain"
+        }
+      }
+    }
+  },
+  "agent_behavior": {
+    "role": "Lead Architect",
+    "strict_mode": true,
+    "browser_actions": {
+      "auto_confirm": true,
+      "allowed_domains": [
+        "localhost",
+        "127.0.0.1"
+      ]
+    },
+    "permissions": {
+      "execute_javascript": "unrestricted"
+    }
+  },
+  "engine": {
+    "type": "antigravity-v2",
+    "mode": "implementation",
+    "features": {
+      "auto_compliance": true,
+      "test_driven_generation": true
+    }
+  },
+  "governance": {
+    "arb_review_required": true,
+    "compliance_standards": [
+      "IFG-Life-Architecture-Standard"
+    ]
+  }
+}

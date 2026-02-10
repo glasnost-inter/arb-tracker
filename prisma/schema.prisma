@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id              String   @id @default(uuid())
+  
+  // Identitas Proyek
+  name            String
+  description     String?
+  ownerSquad      String
+  pic             String
+
+  // Detail Arsitektur
+  type            String   // New Service / Major Change
+  docLink         String?
+  
+  // Timeline & Governance
+  submissionDate  DateTime @default(now())
+  reviewDate      DateTime?
+  decisionDate    DateTime? // Tanggal Keputusan
+  status          String   @default("Submitted") // Submitted, In-Review, Approved, Rejected
+
+  // Hasil Akhir
+  decision        String?
+  mitigationNotes String?
+  adrNumber       String?
+  notes           String?
+  slaDuration     Int      @default(5)
+  slaTarget       DateTime // Calculated: submissionDate + slaDuration working days
+
+  attachments     Attachment[]
+  history         ProjectHistory[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  filename  String
+  path      String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Squad {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+}
+
+model ArchivedProject {
+  id              String   @id
+  
+  // Identitas Proyek
+  name            String
+  description     String?
+  ownerSquad      String
+  pic             String
+
+  // Detail Arsitektur
+  type            String   // New Service / Major Change
+  docLink         String?
+  
+  // Timeline & Governance
+  submissionDate  DateTime
+  reviewDate      DateTime?
+  decisionDate    DateTime?
+  status          String 
+
+  // Hasil Akhir
+  decision        String?
+  mitigationNotes String?
+  adrNumber       String?
+  notes           String?
+  slaDuration     Int
+  slaTarget       DateTime
+
+  attachments     ArchivedAttachment[]
+
+  createdAt       DateTime
+  updatedAt       DateTime
+  archivedAt      DateTime @default(now())
+}
+
+model ArchivedAttachment {
+  id        String   @id
+  filename  String
+  path      String
+  projectId String
+  project   ArchivedProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime
+}
+
+model ProjectHistory {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  changes   String   // JSON string of changes: [{ field: "Status", old: "X", new: "Y" }]
+  timestamp DateTime @default(now())
+  actor     String?  // Name/ID of user who made the change
+}
