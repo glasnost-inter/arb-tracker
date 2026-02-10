@@ -67,6 +67,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">ARB Tracker Dashboard</h1>
           <div className="flex gap-2">
+            <Link href="/side-quest">
+              <Button variant="outline">Side Quest</Button>
+            </Link>
             <Link href="/admin">
               <Button variant="outline">Admin</Button>
             </Link>

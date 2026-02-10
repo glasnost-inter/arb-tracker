@@ -340,3 +340,155 @@ export async function getProjectHistory(projectId: string) {
         return []
     }
 }
+
+// Helper to save files
+async function saveFiles(formData: FormData) {
+    const files = formData.getAll('attachments') as File[]
+    const savedAttachments = []
+
+    if (files && files.length > 0) {
+        const uploadDir = join(process.cwd(), 'public', 'uploads')
+        // Ensure directory exists (node 10+)
+        await import('fs').then(fs => fs.promises.mkdir(uploadDir, { recursive: true }))
+
+        for (const file of files) {
+            if (file.size > 0 && file.name !== 'undefined') {
+                const buffer = Buffer.from(await file.arrayBuffer())
+                const uniqueName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+                const uploadPath = join(uploadDir, uniqueName)
+                await writeFile(uploadPath, buffer)
+                savedAttachments.push({
+                    filename: file.name,
+                    path: `/uploads/${uniqueName}`
+                })
+            }
+        }
+    }
+    return savedAttachments
+}
+
+export async function submitSideQuest(formData: FormData) {
+    try {
+        const questName = formData.get('questName') as string || 'Untitled Quest'
+        const instruction = formData.get('instruction') as string
+        const impactScore = parseInt(formData.get('impactScore') as string)
+        const dueDateStr = formData.get('dueDate') as string
+        const dueDate = new Date(dueDateStr)
+
+        const requestDateStr = formData.get('requestDate') as string
+        const requestDate = requestDateStr ? new Date(requestDateStr) : new Date()
+
+        const finishDateStr = formData.get('finishDate') as string
+        const finishDate = finishDateStr ? new Date(finishDateStr) : null
+
+        const requestor = formData.get('requestor') as string || 'Unknown'
+        const executor = formData.get('executor') as string || null
+        const status = formData.get('status') as string || 'Submited'
+
+        if (!instruction || !impactScore || !dueDateStr) {
+            return { error: 'Missing required fields' }
+        }
+
+        // Generate Ticket Code
+        const ticketCode = `SQ-${Date.now().toString().slice(-6)}`
+
+        // Handle Attachments
+        const savedAttachments = await saveFiles(formData)
+
+        // Save to DB
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (prisma as any).sideQuest.create({
+            data: {
+                ticketCode,
+                questName,
+                instruction,
+                requestDate,
+                requestor,
+                executor,
+                dueDate,
+                finishDate,
+                impactScore,
+                status,
+                attachments: {
+                    create: savedAttachments
+                }
+            }
+        })
+
+        revalidatePath('/side-quest')
+        return { success: true, ticketCode }
+    } catch (error) {
+        console.error('Failed to submit side quest:', error)
+        return { error: 'Failed to submit side quest' }
+    }
+}
+
+export async function getSideQuests(status?: string) {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const where: any = {}
+        if (status) where.status = status
+
+        const quests = await prisma.sideQuest.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            include: { attachments: true }
+        })
+        return quests
+    } catch (error) {
+        console.error('Failed to fetch side quests:', error)
+        return []
+    }
+}
+
+export async function getSideQuestById(id: string) {
+    try {
+        const quest = await prisma.sideQuest.findUnique({
+            where: { id },
+            include: {
+                followUps: {
+                    orderBy: { date: 'desc' },
+                    include: { attachments: true }
+                },
+                attachments: true
+            }
+        })
+        return quest
+    } catch (error) {
+        console.error('Failed to fetch side quest:', error)
+        return null
+    }
+}
+
+export async function addSideQuestFollowUp(formData: FormData) {
+    try {
+        const sideQuestId = formData.get('sideQuestId') as string
+        const action = formData.get('action') as string
+        const dateStr = formData.get('date') as string
+        const date = dateStr ? new Date(dateStr) : new Date()
+
+        if (!sideQuestId || !action) {
+            return { error: 'Missing required fields' }
+        }
+
+        // Handle Attachments
+        const savedAttachments = await saveFiles(formData)
+
+        await prisma.sideQuestFollowUp.create({
+            data: {
+                sideQuestId,
+                action,
+                date,
+                attachments: {
+                    create: savedAttachments
+                }
+            }
+        })
+
+        revalidatePath(`/side-quest/${sideQuestId}`)
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to add follow-up:', error)
+        return { error: 'Failed to add follow-up' }
+    }
+}

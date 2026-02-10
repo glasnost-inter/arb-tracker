@@ -106,3 +106,49 @@ model ProjectHistory {
   timestamp DateTime @default(now())
   actor     String?  // Name/ID of user who made the change
 }
+
+model SideQuest {
+  id          String   @id @default(uuid())
+  ticketCode  String
+  questName   String   @default("Untitled Quest")
+  instruction String
+  requestDate DateTime @default(now())
+  requestor   String   @default("Unknown")
+  executor    String?
+  dueDate     DateTime
+  finishDate  DateTime?
+  impactScore Int
+  status      String   @default("Submited")
+  createdAt   DateTime @default(now())
+
+  followUps   SideQuestFollowUp[]
+  attachments SideQuestAttachment[]
+}
+
+model SideQuestFollowUp {
+  id          String    @id @default(uuid())
+  sideQuestId String
+  sideQuest   SideQuest @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
+  date        DateTime  @default(now())
+  action      String
+  createdAt   DateTime  @default(now())
+  attachments SideQuestFollowUpAttachment[]
+}
+
+model SideQuestAttachment {
+  id          String    @id @default(uuid())
+  filename    String
+  path        String
+  sideQuestId String
+  sideQuest   SideQuest @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+}
+
+model SideQuestFollowUpAttachment {
+  id                  String            @id @default(uuid())
+  filename            String
+  path                String
+  sideQuestFollowUpId String
+  sideQuestFollowUp   SideQuestFollowUp @relation(fields: [sideQuestFollowUpId], references: [id], onDelete: Cascade)
+  createdAt           DateTime          @default(now())
+}

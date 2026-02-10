@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../../components/ui/Sheet'
-import { Button } from '../../../components/ui/Button'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/Sheet'
+import { Button } from './ui/Button'
 
 type Attachment = {
     id: string

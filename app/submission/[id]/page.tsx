@@ -6,7 +6,7 @@ import { Container } from '../../components/ui/Container'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
-import AttachmentList from './components/AttachmentList'
+import AttachmentList from '../../components/AttachmentList'
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -107,7 +107,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                 {history && history.length > 0 ? (
                                     <div className="relative border-l border-muted ml-3 space-y-6">
                                         {history.map((log) => {
-                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                             const changes = JSON.parse(log.changes) as { field: string, old: string, new: string }[]
                                             return (
                                                 <div key={log.id} className="ml-6 relative">
