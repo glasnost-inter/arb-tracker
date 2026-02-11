@@ -1,0 +1,146 @@
+erDiagram
+
+    %% User and Authentication (Implicit / Future)
+    %% Currently, User is represented implicitly via strings (PIC, Actor, Requestor)
+    %% User ||--o{ Project : "manages/owns"
+    %% User ||--o{ SideQuest : "requests/executes"
+
+    %% Project / Submission Management
+    Project {
+        String id PK
+        String name
+        String description
+        String ownerSquad "FK to Squad.name (Conceptually)"
+        String pic "Person In Charge"
+        String type
+        DateTime submissionDate
+        DateTime reviewDate
+        DateTime decisionDate
+        String status "Submitted, In-Review, Approved, Rejected"
+        String decision
+        String mitigationNotes
+        String adrNumber
+        String notes
+        Int slaDuration
+        DateTime slaTarget
+        DateTime createdAt
+        DateTime updatedAt
+    }
+
+    DocumentationLink {
+        String id PK
+        String url
+        String projectId FK
+        DateTime createdAt
+    }
+
+    Attachment {
+        String id PK
+        String filename
+        String path
+        String projectId FK
+        DateTime createdAt
+    }
+
+    ProjectHistory {
+        String id PK
+        String projectId FK
+        String changes "JSON"
+        DateTime timestamp
+        String actor "User who made the change"
+    }
+
+    Squad {
+        Int id PK
+        String name
+    }
+
+    %% Archival System
+    ArchivedProject {
+        String id PK
+        String name
+        String description
+        String ownerSquad
+        String pic
+        String type
+        DateTime submissionDate
+        DateTime reviewDate
+        DateTime decisionDate
+        String status
+        String decision
+        String mitigationNotes
+        String adrNumber
+        String notes
+        Int slaDuration
+        DateTime slaTarget
+        DateTime createdAt
+        DateTime updatedAt
+        DateTime archivedAt
+    }
+
+    ArchivedDocumentationLink {
+        String id PK
+        String url
+        String projectId FK
+    }
+
+    ArchivedAttachment {
+        String id PK
+        String filename
+        String path
+        String projectId FK
+        DateTime createdAt
+    }
+
+    %% Side Quest System
+    SideQuest {
+        String id PK
+        String ticketCode
+        String questName
+        String instruction
+        DateTime requestDate
+        String requestor
+        String executor
+        DateTime dueDate
+        DateTime finishDate
+        Int impactScore
+        String status
+        DateTime createdAt
+    }
+
+    SideQuestFollowUp {
+        String id PK
+        String sideQuestId FK
+        DateTime date
+        String action
+        DateTime createdAt
+    }
+
+    SideQuestAttachment {
+        String id PK
+        String filename
+        String path
+        String sideQuestId FK
+        DateTime createdAt
+    }
+
+    SideQuestFollowUpAttachment {
+        String id PK
+        String filename
+        String path
+        String sideQuestFollowUpId FK
+        DateTime createdAt
+    }
+
+    %% Relationships
+    Project ||--o{ DocumentationLink : "has"
+    Project ||--o{ Attachment : "has files"
+    Project ||--o{ ProjectHistory : "has history"
+    Project }o..|| Squad : "owned by (loose relation)"
+
+    ArchivedProject ||--o{ ArchivedDocumentationLink : "has"
+    ArchivedProject ||--o{ ArchivedAttachment : "has files"
+
+    SideQuest ||--o{ SideQuestFollowUp : "has follow-ups"
+    SideQuest ||--o{ SideQuestAttachment : "has files"
+    SideQuestFollowUp ||--o{ SideQuestFollowUpAttachment : "has files"

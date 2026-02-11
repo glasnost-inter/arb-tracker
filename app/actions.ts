@@ -16,7 +16,7 @@ export async function submitProject(formData: FormData) {
         const pic = formData.get('pic') as string
         const type = formData.get('type') as string
 
-        const docLink = formData.get('docLink') as string
+        // const docLink = formData.get('docLink') as string // Legacy
         const submissionDateStr = formData.get('submissionDate') as string
         const reviewDateStr = formData.get('reviewDate') as string
         const decisionDateStr = formData.get('decisionDate') as string
@@ -56,6 +56,31 @@ export async function submitProject(formData: FormData) {
             }
         }
 
+        // Create doc links
+        const docLinks = formData.getAll('docLinks') as string[]
+        const docLinksData = docLinks.filter(link => link.trim() !== '').map(link => ({ url: link }))
+
+        // Parse Follow-up Tasks
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tasks: any[] = []
+        let taskIndex = 0
+        while (true) {
+            const description = formData.get(`tasks[${taskIndex}].description`)
+            if (description === null) break
+
+            const dueDateStr = formData.get(`tasks[${taskIndex}].dueDate`) as string
+            const isCompletedStr = formData.get(`tasks[${taskIndex}].isCompleted`) as string
+
+            if (description) {
+                tasks.push({
+                    description: description as string,
+                    dueDate: new Date(dueDateStr),
+                    isCompleted: isCompletedStr === 'true'
+                })
+            }
+            taskIndex++
+        }
+
         await prisma.project.create({
             data: {
                 name,
@@ -63,7 +88,9 @@ export async function submitProject(formData: FormData) {
                 ownerSquad,
                 pic,
                 type,
-                docLink,
+                docLinks: {
+                    create: docLinksData
+                },
                 submissionDate,
                 reviewDate,
                 decisionDate,
@@ -74,6 +101,9 @@ export async function submitProject(formData: FormData) {
                 mitigationNotes,
                 attachments: {
                     create: savedAttachments
+                },
+                followupTasks: {
+                    create: tasks
                 }
             }
         })
@@ -93,8 +123,9 @@ export async function updateProject(id: string, formData: FormData) {
         const ownerSquad = formData.get('ownerSquad') as string
         const pic = formData.get('pic') as string
         const type = formData.get('type') as string
+        const docLinks = formData.getAll('docLinks') as string[]
 
-        const docLink = formData.get('docLink') as string
+        // const docLink = formData.get('docLink') as string // Legacy
         const submissionDateStr = formData.get('submissionDate') as string
         const reviewDateStr = formData.get('reviewDate') as string
         const decisionDateStr = formData.get('decisionDate') as string
@@ -135,10 +166,10 @@ export async function updateProject(id: string, formData: FormData) {
         }
 
         if (status === 'Archived') {
-            // Get current project data including attachments
+            // Get current project data including attachments and tasks
             const project = await prisma.project.findUnique({
                 where: { id },
-                include: { attachments: true }
+                include: { attachments: true, followupTasks: true }
             })
 
             if (!project) throw new Error("Project not found")
@@ -174,6 +205,16 @@ export async function updateProject(id: string, formData: FormData) {
                                 path: a.path,
                                 createdAt: a.createdAt
                             }))
+                        },
+                        followupTasks: {
+                            create: project.followupTasks.map(t => ({
+                                id: t.id,
+                                description: t.description,
+                                isCompleted: t.isCompleted,
+                                dueDate: t.dueDate,
+                                createdAt: t.createdAt,
+                                updatedAt: t.updatedAt
+                            }))
                         }
                     }
                 })
@@ -185,7 +226,8 @@ export async function updateProject(id: string, formData: FormData) {
         } else {
             // Fetch current data for comparison
             const currentProject = await prisma.project.findUnique({
-                where: { id }
+                where: { id },
+                include: { docLinks: true }
             })
 
             if (currentProject) {
@@ -223,7 +265,10 @@ export async function updateProject(id: string, formData: FormData) {
                 checkChange('Owner Squad', currentProject.ownerSquad, ownerSquad)
                 checkChange('PIC', currentProject.pic, pic)
                 checkChange('Type', currentProject.type, type)
-                checkChange('Doc Link', currentProject.docLink, docLink)
+
+                const oldDocLinks = currentProject.docLinks.map(l => l.url).sort().join(', ')
+                const newDocLinksStr = docLinks.filter(l => l.trim() !== '').sort().join(', ')
+                checkChange('Documentation Links', oldDocLinks, newDocLinksStr)
                 checkChange('Submission Date', currentProject.submissionDate, submissionDate)
                 checkChange('Review Date', currentProject.reviewDate, reviewDate)
                 checkChange('Decision Date', currentProject.decisionDate, decisionDate)
@@ -245,6 +290,78 @@ export async function updateProject(id: string, formData: FormData) {
                 }
             }
 
+            // Handle Doc Links Update (Replace all strategy)
+
+            // Create new links data
+            const docLinksData = docLinks.filter(link => link.trim() !== '').map(link => ({ url: link }))
+
+            // Delete existing links
+            await prisma.documentationLink.deleteMany({
+                where: { projectId: id }
+            })
+
+            // Parse Follow-up Tasks
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const submittedTasks: any[] = []
+            let taskIndex = 0
+            while (true) {
+                const description = formData.get(`tasks[${taskIndex}].description`)
+                if (description === null) break
+
+                const dueDateStr = formData.get(`tasks[${taskIndex}].dueDate`) as string
+                const id = formData.get(`tasks[${taskIndex}].id`) as string
+                const isCompletedStr = formData.get(`tasks[${taskIndex}].isCompleted`) as string
+
+                if (description) {
+                    submittedTasks.push({
+                        id: id || undefined,
+                        description: description as string,
+                        dueDate: new Date(dueDateStr),
+                        isCompleted: isCompletedStr === 'true'
+                    })
+                }
+                taskIndex++
+            }
+
+            // Sync Tasks: Delete missing, Update existing, Create new
+            // We can simple delete all and recreate, but that loses history/IDs if we care.
+            // Better: 
+            // 1. Identify IDs in submittedTasks.
+            // 2. Delete tasks in DB specifically for this project that are NOT in submitted IDs.
+            // 3. Upsert (or Update/Create) the submitted tasks.
+
+            // To do this cleanly in a transaction or separate calls:
+            const submittedIds = submittedTasks.filter(t => t.id).map(t => t.id)
+
+            await prisma.followupTask.deleteMany({
+                where: {
+                    projectId: id,
+                    id: { notIn: submittedIds }
+                }
+            })
+
+            for (const task of submittedTasks) {
+                if (task.id) {
+                    await prisma.followupTask.update({
+                        where: { id: task.id },
+                        data: {
+                            description: task.description,
+                            dueDate: task.dueDate,
+                            isCompleted: task.isCompleted
+                        }
+                    })
+                } else {
+                    await prisma.followupTask.create({
+                        data: {
+                            projectId: id,
+                            description: task.description,
+                            dueDate: task.dueDate,
+                            isCompleted: task.isCompleted
+                        }
+                    })
+                }
+            }
+
             await prisma.project.update({
                 where: { id },
                 data: {
@@ -253,13 +370,15 @@ export async function updateProject(id: string, formData: FormData) {
                     ownerSquad,
                     pic,
                     type,
-                    docLink,
+                    docLinks: {
+                        create: docLinksData
+                    },
                     submissionDate,
                     reviewDate,
                     decisionDate,
                     slaDuration,
                     slaTarget,
-                    status: status || 'Submitted',
+                    status,
                     decision,
                     mitigationNotes,
                     attachments: {
@@ -289,7 +408,15 @@ export async function getProjectById(id: string) {
         console.log(`Fetching project with ID: ${id} (type: ${typeof id})`)
         const project = await prisma.project.findUnique({
             where: { id: String(id) },
-            include: { attachments: true }
+            include: {
+                attachments: true,
+                docLinks: true,
+                followupTasks: {
+                    include: {
+                        attachments: true
+                    }
+                }
+            }
         })
         console.log('Project fetched:', project)
         return project
@@ -301,26 +428,22 @@ export async function getProjectById(id: string) {
 
 export async function getDistinctDocLinks() {
     try {
-        const projects = await prisma.project.findMany({
-            select: { docLink: true },
-            where: { docLink: { not: null } },
-            distinct: ['docLink']
+        const links = await prisma.documentationLink.findMany({
+            select: { url: true },
+            distinct: ['url']
         })
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const archivedProjects = await (prisma as any).archivedProject.findMany({
-            select: { docLink: true },
-            where: { docLink: { not: null } },
-            distinct: ['docLink']
+        const archivedLinks = await prisma.archivedDocumentationLink.findMany({
+            select: { url: true },
+            distinct: ['url']
         })
 
-        const links = new Set([
-            ...projects.map(p => p.docLink).filter(Boolean),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ...archivedProjects.map((p: any) => p.docLink).filter(Boolean)
+        const allLinks = new Set([
+            ...links.map(l => l.url),
+            ...archivedLinks.map(l => l.url)
         ])
 
-        return Array.from(links).sort() as string[]
+        return Array.from(allLinks).sort()
     } catch (error) {
         console.error('Error fetching doc links:', error)
         return []
@@ -490,5 +613,62 @@ export async function addSideQuestFollowUp(formData: FormData) {
     } catch (error) {
         console.error('Failed to add follow-up:', error)
         return { error: 'Failed to add follow-up' }
+    }
+}
+
+export async function updateFollowupTask(taskId: string, formData: FormData) {
+    try {
+        const isCompleted = formData.get('isCompleted') === 'true'
+        // Handle Attachments
+        const files = formData.getAll('attachments') as File[]
+        const savedAttachments = []
+
+        if (files && files.length > 0) {
+            const uploadDir = join(process.cwd(), 'public', 'uploads')
+            // Ensure directory exists (node 10+)
+            await import('fs').then(fs => fs.promises.mkdir(uploadDir, { recursive: true }))
+
+            for (const file of files) {
+                if (file.size > 0 && file.name !== 'undefined') {
+                    const buffer = Buffer.from(await file.arrayBuffer())
+                    const uniqueName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+                    const uploadPath = join(uploadDir, uniqueName)
+                    await writeFile(uploadPath, buffer)
+                    savedAttachments.push({
+                        filename: file.name,
+                        path: `/uploads/${uniqueName}`
+                    })
+                }
+            }
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (prisma as any).followupTask.update({
+            where: { id: taskId },
+            data: {
+                isCompleted,
+                attachments: {
+                    create: savedAttachments
+                }
+            }
+        })
+
+        revalidatePath('/')
+        // We can't easily revalidate the specific project page without ID, but revalidatePath('/') helps list pages.
+        // The caller (client component) should probably trigger a router.refresh() or we need the projectId to be passed or fetched.
+        // Let's fetch project ID to revalidate the detail page correctly.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const task = await (prisma as any).followupTask.findUnique({
+            where: { id: taskId },
+            select: { projectId: true }
+        })
+        if (task) {
+            revalidatePath(`/submission/${task.projectId}`)
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to update follow-up task:', error)
+        return { error: 'Failed to update follow-up task' }
     }
 }

@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Input } from '../components/ui/Input'
 import { Label } from '../components/ui/Label'
 import { Select } from '../components/ui/Select'
-import { Textarea } from '../components/ui/Textarea'
+// import { Textarea } from '../components/ui/Textarea' // Removed
 import { Button } from '../components/ui/Button'
+import RichTextEditor from '../components/ui/RichTextEditor'
 
 type Squad = {
     id: number
@@ -20,6 +21,13 @@ type Attachment = {
     path: string
 }
 
+type FollowupTask = {
+    id?: string
+    description: string
+    isCompleted: boolean
+    dueDate: string // stored as YYYY-MM-DD string for input
+}
+
 type ProjectData = {
     id?: string
     name: string
@@ -27,7 +35,8 @@ type ProjectData = {
     ownerSquad: string
     pic: string
     type: string
-    docLink: string | null
+    // docLink: string | null // Legacy
+    docLinks?: { id: string, url: string }[]
     submissionDate: Date
     reviewDate: Date | null
     decisionDate: Date | null
@@ -36,12 +45,76 @@ type ProjectData = {
     mitigationNotes: string | null
     slaDuration: number
     attachments?: Attachment[]
+    followupTasks?: { id: string, description: string, isCompleted: boolean, dueDate: Date }[]
 }
 
 export default function SubmissionForm({ squads, initialData, recentDocLinks }: { squads: Squad[], initialData?: ProjectData, recentDocLinks?: string[] }) {
     const [slaDuration, setSlaDuration] = useState(initialData?.slaDuration || 5)
     const [files, setFiles] = useState<File[]>([])
+    console.log('SubmissionForm initialData:', initialData)
+
+    const [docLinks, setDocLinks] = useState<string[]>(() => {
+        if (initialData?.docLinks && initialData.docLinks.length > 0) {
+            return initialData.docLinks.map(l => l.url)
+        }
+        // Fallback for legacy single link
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((initialData as any)?.docLink) {
+            return [(initialData as any).docLink]
+        }
+        return ['']
+    })
+
+    // Tasks state
+    const [tasks, setTasks] = useState<FollowupTask[]>(() => {
+        if (initialData?.followupTasks) {
+            return initialData.followupTasks.map(t => ({
+                id: t.id,
+                description: t.description,
+                isCompleted: t.isCompleted,
+                dueDate: new Date(t.dueDate).toISOString().split('T')[0]
+            }))
+        }
+        return []
+    })
+
+    const addTask = () => {
+        setTasks([...tasks, { description: '', isCompleted: false, dueDate: '' }])
+    }
+
+    const removeTask = (index: number) => {
+        const newTasks = [...tasks]
+        newTasks.splice(index, 1)
+        setTasks(newTasks)
+    }
+
+    const updateTask = (index: number, field: keyof FollowupTask, value: any) => {
+        const newTasks = [...tasks]
+        newTasks[index] = { ...newTasks[index], [field]: value }
+        setTasks(newTasks)
+    }
+
+    // Controlled state for RichTextEditor
+    const [description, setDescription] = useState(initialData?.description || '')
+    const [mitigationNotes, setMitigationNotes] = useState(initialData?.mitigationNotes || '')
+
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const addDocLink = () => {
+        setDocLinks([...docLinks, ''])
+    }
+
+    const removeDocLink = (index: number) => {
+        const newLinks = [...docLinks]
+        newLinks.splice(index, 1)
+        setDocLinks(newLinks)
+    }
+
+    const handleDocLinkChange = (index: number, value: string) => {
+        const newLinks = [...docLinks]
+        newLinks[index] = value
+        setDocLinks(newLinks)
+    }
 
     // Handle paste event
     useEffect(() => {
@@ -119,8 +192,13 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Description <span className="text-muted-foreground font-normal text-xs">(Markdown supported)</span></Label>
-                        <Textarea id="description" name="description" rows={4} defaultValue={initialData?.description || ''} placeholder="Describe the project goal and scope..." />
+                        <Label htmlFor="description">Description</Label>
+                        <RichTextEditor
+                            value={description}
+                            onChange={setDescription}
+                            placeholder="Describe the project goal, scope, and key features..."
+                        />
+                        <input type="hidden" name="description" value={description} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -132,18 +210,36 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                                 <option>Tech Refresh</option>
                                 <option>Deprecation</option>
                                 <option>Normal Change</option>
+                                <option>Bug Fixing</option>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="docLink">Documentation Link</Label>
-                            <Input
-                                id="docLink"
-                                name="docLink"
-                                type="url"
-                                list="doc-links"
-                                defaultValue={initialData?.docLink || ''}
-                                placeholder="https://confluence..."
-                            />
+                        <div className="space-y-3">
+                            <Label>Documentation Links</Label>
+                            {docLinks.map((link, index) => (
+                                <div key={index} className="flex gap-2">
+                                    <Input
+                                        name="docLinks"
+                                        type="url"
+                                        list="doc-links"
+                                        value={link || ''}
+                                        onChange={(e) => handleDocLinkChange(index, e.target.value)}
+                                        placeholder="https://confluence..."
+                                        className="flex-1"
+                                    />
+                                    {docLinks.length > 1 && (
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeDocLink(index)}>
+                                            <span className="sr-only">Remove</span>
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={addDocLink} className="mt-2">
+                                + Add Link
+                            </Button>
+
                             {recentDocLinks && recentDocLinks.length > 0 && (
                                 <datalist id="doc-links">
                                     {recentDocLinks.map((link, i) => (
@@ -251,8 +347,70 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="mitigationNotes">Decision Notes / Mitigation <span className="text-muted-foreground font-normal text-xs">(Markdown supported)</span></Label>
-                        <Textarea id="mitigationNotes" name="mitigationNotes" rows={3} defaultValue={initialData?.mitigationNotes || ''} placeholder="Additional notes, conditions or mitigation strategies..." />
+                        <Label htmlFor="mitigationNotes">Decision Notes / Mitigation</Label>
+                        <RichTextEditor
+                            value={mitigationNotes}
+                            onChange={setMitigationNotes}
+                            placeholder="Additional notes, conditions or mitigation strategies..."
+                        />
+                        <input type="hidden" name="mitigationNotes" value={mitigationNotes} />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Follow-up Tasks</CardTitle>
+                    <CardDescription>Actionable items to be tracked.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Tasks List */}
+                    <div className="space-y-3">
+                        {tasks.map((task, index) => (
+                            <div key={index} className="flex gap-2 items-start p-3 bg-muted/40 rounded-md">
+                                <div className="flex-1 space-y-2">
+                                    <Input
+                                        name={`tasks[${index}].description`}
+                                        placeholder="Task description..."
+                                        value={task.description}
+                                        onChange={(e) => updateTask(index, 'description', e.target.value)}
+                                        required
+                                    />
+                                    <div className="flex gap-2 items-center">
+                                        <div className="flex-1">
+                                            <Label htmlFor={`task-date-${index}`} className="text-xs text-muted-foreground mb-1 block">Due Date</Label>
+                                            <Input
+                                                id={`task-date-${index}`}
+                                                name={`tasks[${index}].dueDate`}
+                                                type="date"
+                                                value={task.dueDate}
+                                                onChange={(e) => updateTask(index, 'dueDate', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        {/* Hidden inputs for ID and completion status if needed for updates */}
+                                        <input type="hidden" name={`tasks[${index}].id`} value={task.id || ''} />
+                                        <input type="hidden" name={`tasks[${index}].isCompleted`} value={String(task.isCompleted)} />
+                                    </div>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive/90 mt-1"
+                                    onClick={() => removeTask(index)}
+                                >
+                                    <span className="sr-only">Remove</span>
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </Button>
+                            </div>
+                        ))}
+
+                        <Button type="button" variant="outline" size="sm" onClick={addTask} className="w-full">
+                            + Add Task
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

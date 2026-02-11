@@ -1,7 +1,9 @@
+
+import FollowupTaskList from '../../components/FollowupTaskList'
 import { getProjectById, getProjectHistory } from '../../actions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import ReactMarkdown from 'react-markdown'
+import DOMPurify from 'isomorphic-dompurify'
 import { Container } from '../../components/ui/Container'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
@@ -25,6 +27,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             case 'Revision Needed': return 'warning'
             default: return 'secondary'
         }
+    }
+
+    const sanitizeHtml = (html: string) => {
+        return DOMPurify.sanitize(html)
     }
 
     return (
@@ -62,9 +68,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </CardHeader>
                             <CardContent>
                                 {project.description ? (
-                                    <div className="prose prose-sm prose-slate dark:prose-invert max-w-none">
-                                        <ReactMarkdown>{project.description}</ReactMarkdown>
-                                    </div>
+                                    <div
+                                        className="prose prose-sm prose-slate dark:prose-invert max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(project.description) }}
+                                    />
                                 ) : (
                                     <p className="text-muted-foreground italic">No description provided.</p>
                                 )}
@@ -77,11 +84,31 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </CardHeader>
                             <CardContent>
                                 {project.mitigationNotes ? (
-                                    <div className="prose prose-sm prose-slate dark:prose-invert max-w-none">
-                                        <ReactMarkdown>{project.mitigationNotes}</ReactMarkdown>
-                                    </div>
+                                    <div
+                                        className="prose prose-sm prose-slate dark:prose-invert max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(project.mitigationNotes) }}
+                                    />
                                 ) : (
                                     <p className="text-muted-foreground italic">No mitigation notes.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Follow-up Tasks</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {project.followupTasks && project.followupTasks.length > 0 ? (
+                                    <FollowupTaskList
+                                        tasks={project.followupTasks.map(t => ({
+                                            ...t,
+                                            dueDate: t.dueDate,
+                                            attachments: t.attachments || []
+                                        }))}
+                                    />
+                                ) : (
+                                    <p className="text-muted-foreground italic text-sm">No follow-up tasks.</p>
                                 )}
                             </CardContent>
                         </Card>
@@ -150,10 +177,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                 </div>
                                 <div className="border-t pt-3">
                                     <p className="text-sm font-medium text-muted-foreground">Documentation</p>
-                                    {project.docLink ? (
-                                        <a href={project.docLink} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">
-                                            {project.docLink}
-                                        </a>
+                                    {project.docLinks && project.docLinks.length > 0 ? (
+                                        <ul className="list-disc list-inside">
+                                            {project.docLinks.map(link => (
+                                                <li key={link.id} className="text-sm">
+                                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                                                        {link.url}
+                                                    </a>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     ) : (
                                         <p className="text-sm">-</p>
                                     )}

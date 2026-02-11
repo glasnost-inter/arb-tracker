@@ -18,7 +18,7 @@ model Project {
 
   // Detail Arsitektur
   type            String   // New Service / Major Change
-  docLink         String?
+  docLinks        DocumentationLink[]
   
   // Timeline & Governance
   submissionDate  DateTime @default(now())
@@ -36,9 +36,39 @@ model Project {
 
   attachments     Attachment[]
   history         ProjectHistory[]
+  followupTasks   FollowupTask[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model FollowupTask {
+  id          String   @id @default(uuid())
+  description String
+  isCompleted Boolean  @default(false)
+  dueDate     DateTime
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  attachments FollowupTaskAttachment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FollowupTaskAttachment {
+  id              String       @id @default(uuid())
+  filename        String
+  path            String
+  createdAt       DateTime     @default(now())
+  followupTaskId  String
+  followupTask    FollowupTask @relation(fields: [followupTaskId], references: [id], onDelete: Cascade)
+}
+
+model DocumentationLink {
+  id        String   @id @default(uuid())
+  url       String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 model Attachment {
@@ -66,7 +96,7 @@ model ArchivedProject {
 
   // Detail Arsitektur
   type            String   // New Service / Major Change
-  docLink         String?
+  docLinks        ArchivedDocumentationLink[]
   
   // Timeline & Governance
   submissionDate  DateTime
@@ -83,10 +113,39 @@ model ArchivedProject {
   slaTarget       DateTime
 
   attachments     ArchivedAttachment[]
+  followupTasks   ArchivedFollowupTask[]
 
   createdAt       DateTime
   updatedAt       DateTime
   archivedAt      DateTime @default(now())
+}
+
+model ArchivedFollowupTask {
+  id                String          @id @default(uuid())
+  description       String
+  isCompleted       Boolean
+  dueDate           DateTime
+  projectArchivedId String
+  projectArchived   ArchivedProject @relation(fields: [projectArchivedId], references: [id], onDelete: Cascade)
+  attachments       ArchivedFollowupTaskAttachment[]
+  createdAt         DateTime
+  updatedAt         DateTime
+}
+
+model ArchivedFollowupTaskAttachment {
+  id                      String                @id @default(uuid())
+  filename                String
+  path                    String
+  createdAt               DateTime              @default(now())
+  archivedFollowupTaskId  String
+  archivedFollowupTask    ArchivedFollowupTask  @relation(fields: [archivedFollowupTaskId], references: [id], onDelete: Cascade)
+}
+
+model ArchivedDocumentationLink {
+  id        String   @id @default(uuid())
+  url       String
+  projectId String
+  project   ArchivedProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model ArchivedAttachment {

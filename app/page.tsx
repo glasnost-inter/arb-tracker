@@ -26,25 +26,45 @@ type Project = {
   updatedAt: Date
 }
 
-async function getProjects(status?: string, decision?: string): Promise<Project[]> {
+async function getProjects(status?: string, decision?: string, sortByStr: string = 'updatedAt-desc', search?: string): Promise<Project[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {}
   if (status) where.status = status
   if (decision) where.decision = decision
+  if (search) {
+    where.name = {
+      contains: search,
+    }
+  }
+
+  // Parse sortBy string: "field-dir,field2-dir2"
+  const orderBy = sortByStr.split(',').map(s => {
+    const [field, dir] = s.split('-')
+    return { [field]: dir as 'asc' | 'desc' }
+  })
+
+  // Always append updatedAt for stable sorting if not present
+  if (!sortByStr.includes('updatedAt')) {
+    orderBy.push({ updatedAt: 'desc' })
+  }
 
   const projects = await prisma.project.findMany({
     where,
-    orderBy: { submissionDate: 'desc' }
+    orderBy: orderBy
   })
   return projects
 }
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const resolvedSearchParams = await searchParams
-  const status = typeof resolvedSearchParams.status === 'string' ? resolvedSearchParams.status : undefined
-  const decision = typeof resolvedSearchParams.decision === 'string' ? resolvedSearchParams.decision : undefined
+  /* eslint-disable prefer-const */
+  let { status, decision, sortBy } = resolvedSearchParams
 
-  const projects = await getProjects(status, decision)
+  status = typeof status === 'string' ? status : undefined
+  decision = typeof decision === 'string' ? decision : undefined
+  const sortByStr = typeof sortBy === 'string' ? sortBy : 'updatedAt-desc'
+
+  const projects = await getProjects(status, decision, sortByStr)
 
   const getSlaBadgeVariant = (status: SlaStatus) => {
     switch (status) {
