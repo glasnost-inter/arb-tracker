@@ -7,12 +7,18 @@ import { Badge } from '../components/ui/Badge'
 import { getSideQuests } from '../actions'
 import SideQuestFilters from './components/SideQuestFilters'
 
+import DOMPurify from 'isomorphic-dompurify'
+
 export default async function SideQuestPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     const resolvedSearchParams = await searchParams
     const status = typeof resolvedSearchParams.status === 'string' ? resolvedSearchParams.status : undefined
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const quests = await getSideQuests(status) as any[]
+
+    const sanitizeHtml = (html: string) => {
+        return DOMPurify.sanitize(html)
+    }
 
     return (
         <div className="min-h-screen bg-background py-10">
@@ -64,9 +70,10 @@ export default async function SideQuestPage({ searchParams }: { searchParams: Pr
                                     </div>
                                 </CardHeader>
                                 <CardContent className="pb-2">
-                                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                                        {quest.instruction}
-                                    </p>
+                                    <div
+                                        className="text-sm text-muted-foreground mb-4 line-clamp-2 prose prose-sm dark:prose-invert max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(quest.instruction) }}
+                                    />
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                         <div className="flex flex-col">
                                             <span className="font-semibold text-foreground">Request Date:</span>

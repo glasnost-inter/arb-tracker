@@ -14,7 +14,6 @@ type Project = {
   ownerSquad: string
   pic: string
   type: string
-  docLink: string | null
   submissionDate: Date
   reviewDate: Date | null
   status: string

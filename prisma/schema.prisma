@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -49,19 +49,13 @@ model FollowupTask {
   dueDate     DateTime
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  attachments FollowupTaskAttachment[]
+  attachments Attachment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-model FollowupTaskAttachment {
-  id              String       @id @default(uuid())
-  filename        String
-  path            String
-  createdAt       DateTime     @default(now())
-  followupTaskId  String
-  followupTask    FollowupTask @relation(fields: [followupTaskId], references: [id], onDelete: Cascade)
-}
+// Removed FollowupTaskAttachment
+// model FollowupTaskAttachment { ... }
 
 model DocumentationLink {
   id        String   @id @default(uuid())
@@ -71,13 +65,27 @@ model DocumentationLink {
   createdAt DateTime @default(now())
 }
 
+
 model Attachment {
-  id        String   @id @default(uuid())
-  filename  String
-  path      String
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id                  String   @id @default(uuid())
+  filename            String
+  path                String
+  caption             String?
+  mimeType            String   @default("application/octet-stream") // New field
+  createdAt           DateTime @default(now())
+
+  // Polymorphic Relations (Optional FKs)
+  projectId           String?
+  project             Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  followupTaskId      String?
+  followupTask        FollowupTask? @relation(fields: [followupTaskId], references: [id], onDelete: Cascade)
+
+  sideQuestId         String?
+  sideQuest           SideQuest? @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
+
+  sideQuestFollowUpId String?
+  sideQuestFollowUp   SideQuestFollowUp? @relation(fields: [sideQuestFollowUpId], references: [id], onDelete: Cascade)
 }
 
 model Squad {
@@ -127,19 +135,11 @@ model ArchivedFollowupTask {
   dueDate           DateTime
   projectArchivedId String
   projectArchived   ArchivedProject @relation(fields: [projectArchivedId], references: [id], onDelete: Cascade)
-  attachments       ArchivedFollowupTaskAttachment[]
+  attachments       ArchivedAttachment[]
   createdAt         DateTime
   updatedAt         DateTime
 }
 
-model ArchivedFollowupTaskAttachment {
-  id                      String                @id @default(uuid())
-  filename                String
-  path                    String
-  createdAt               DateTime              @default(now())
-  archivedFollowupTaskId  String
-  archivedFollowupTask    ArchivedFollowupTask  @relation(fields: [archivedFollowupTaskId], references: [id], onDelete: Cascade)
-}
 
 model ArchivedDocumentationLink {
   id        String   @id @default(uuid())
@@ -148,13 +148,55 @@ model ArchivedDocumentationLink {
   project   ArchivedProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
+model ArchivedSideQuest {
+  id          String   @id
+  ticketCode  String
+  questName   String
+  instruction String
+  requestDate DateTime
+  requestor   String
+  executor    String?
+  dueDate     DateTime
+  finishDate  DateTime?
+  impactScore Int
+  status      String
+  createdAt   DateTime
+  archivedAt  DateTime @default(now())
+
+  followUps   ArchivedSideQuestFollowUp[]
+  attachments ArchivedAttachment[]
+}
+
+model ArchivedSideQuestFollowUp {
+  id                String    @id
+  sideQuestId       String
+  sideQuest         ArchivedSideQuest @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
+  date              DateTime
+  action            String
+  createdAt         DateTime
+  attachments       ArchivedAttachment[]
+}
+
 model ArchivedAttachment {
-  id        String   @id
-  filename  String
-  path      String
-  projectId String
-  project   ArchivedProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime
+  id                      String                @id
+  filename                String
+  path                    String
+  caption                 String?
+  mimeType                String                @default("application/octet-stream")
+  createdAt               DateTime
+
+  // Polymorphic relations for archives
+  projectId               String?
+  project                 ArchivedProject?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  sideQuestId             String?
+  sideQuest               ArchivedSideQuest?    @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
+
+  sideQuestFollowUpId     String?
+  sideQuestFollowUp       ArchivedSideQuestFollowUp? @relation(fields: [sideQuestFollowUpId], references: [id], onDelete: Cascade)
+
+  archivedFollowupTaskId  String?
+  archivedFollowupTask    ArchivedFollowupTask? @relation(fields: [archivedFollowupTaskId], references: [id], onDelete: Cascade)
 }
 
 model ProjectHistory {
@@ -181,7 +223,7 @@ model SideQuest {
   createdAt   DateTime @default(now())
 
   followUps   SideQuestFollowUp[]
-  attachments SideQuestAttachment[]
+  attachments Attachment[]
 }
 
 model SideQuestFollowUp {
@@ -191,23 +233,9 @@ model SideQuestFollowUp {
   date        DateTime  @default(now())
   action      String
   createdAt   DateTime  @default(now())
-  attachments SideQuestFollowUpAttachment[]
+  attachments Attachment[]
 }
 
-model SideQuestAttachment {
-  id          String    @id @default(uuid())
-  filename    String
-  path        String
-  sideQuestId String
-  sideQuest   SideQuest @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-}
-
-model SideQuestFollowUpAttachment {
-  id                  String            @id @default(uuid())
-  filename            String
-  path                String
-  sideQuestFollowUpId String
-  sideQuestFollowUp   SideQuestFollowUp @relation(fields: [sideQuestFollowUpId], references: [id], onDelete: Cascade)
-  createdAt           DateTime          @default(now())
-}
+// Removed SideQuestAttachment and SideQuestFollowUpAttachment
+// model SideQuestAttachment { ... }
+// model SideQuestFollowUpAttachment { ... }

@@ -1,13 +1,14 @@
 import { Container } from '../../components/ui/Container'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
+import SideQuestFollowupHistory from '../components/SideQuestFollowupHistory'
+import SideQuestStatusUpdate from '../components/SideQuestStatusUpdate'
 import { Button } from '../../components/ui/Button'
 import Link from 'next/link'
 import { getSideQuestById } from '../../actions'
 import { notFound } from 'next/navigation'
 import { SideQuestFollowUpForm } from '../SideQuestFollowUpForm'
-
-
+import DOMPurify from 'isomorphic-dompurify'
 import AttachmentList from '../../components/AttachmentList'
 
 export default async function SideQuestDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,6 +18,10 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
 
     if (!quest) {
         notFound()
+    }
+
+    const sanitizeHtml = (html: string) => {
+        return DOMPurify.sanitize(html)
     }
 
     return (
@@ -32,12 +37,18 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
                         </Button>
                     </Link>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                                {quest.questName}
-                                <Badge variant={quest.status === 'Done' ? 'completed' : 'default'}>{quest.status}</Badge>
-                            </h1>
-                            <p className="text-muted-foreground mt-1">{quest.ticketCode}</p>
+                        <div className="flex flex-col md:flex-row md:items-center gap-4 w-full justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                                    {quest.questName}
+                                    <Badge variant={quest.status === 'Done' ? 'completed' : 'default'}>{quest.status}</Badge>
+                                </h1>
+                                <p className="text-muted-foreground mt-1">{quest.ticketCode}</p>
+                            </div>
+                            <div className="flex items-center gap-3 bg-muted/30 p-2 rounded-lg border">
+                                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Update Status:</span>
+                                <SideQuestStatusUpdate sideQuestId={quest.id} currentStatus={quest.status} />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -52,7 +63,10 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
                             <CardContent className="space-y-6">
                                 <div>
                                     <h3 className="font-semibold text-sm text-muted-foreground mb-1">Instruction</h3>
-                                    <p className="whitespace-pre-wrap">{quest.instruction}</p>
+                                    <div
+                                        className="prose prose-sm prose-slate dark:prose-invert max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(quest.instruction) }}
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -111,24 +125,13 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
                             </CardHeader>
                             <CardContent>
                                 {quest.followUps && quest.followUps.length > 0 ? (
-                                    <div className="relative border-l border-muted ml-3 space-y-8 pb-2">
-                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        {quest.followUps.map((followUp: any) => (
-                                            <div key={followUp.id} className="ml-6 relative">
-                                                <span className="absolute -left-[31px] top-1 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-background" />
-                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-1">
-                                                    <span className="font-medium text-foreground">{new Date(followUp.date).toLocaleDateString()}</span>
-                                                </div>
-                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">{followUp.action}</p>
-
-                                                {followUp.attachments && followUp.attachments.length > 0 && (
-                                                    <div className="mt-2">
-                                                        <AttachmentList attachments={followUp.attachments} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <SideQuestFollowupHistory followUps={quest.followUps.map((fu: any) => ({
+                                        ...fu,
+                                        date: fu.date,
+                                        action: fu.action,
+                                        createdAt: fu.createdAt,
+                                        attachments: fu.attachments || []
+                                    }))} />
                                 ) : (
                                     <p className="text-muted-foreground italic">No follow-ups yet.</p>
                                 )}

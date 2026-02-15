@@ -1,8 +1,8 @@
 
-import FollowupTaskList from '../../components/FollowupTaskList'
 import { getProjectById, getProjectHistory } from '../../actions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import FollowupHistory from '../../components/FollowupHistory'
 import DOMPurify from 'isomorphic-dompurify'
 import { Container } from '../../components/ui/Container'
 import { Button } from '../../components/ui/Button'
@@ -12,7 +12,8 @@ import AttachmentList from '../../components/AttachmentList'
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
-    const project = await getProjectById(id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const project = await getProjectById(id) as any
     const history = await getProjectHistory(id)
 
     if (!project) {
@@ -100,8 +101,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </CardHeader>
                             <CardContent>
                                 {project.followupTasks && project.followupTasks.length > 0 ? (
-                                    <FollowupTaskList
-                                        tasks={project.followupTasks.map(t => ({
+                                    <FollowupHistory
+                                        tasks={project.followupTasks.map((t: any) => ({
                                             ...t,
                                             dueDate: t.dueDate,
                                             attachments: t.attachments || []
@@ -179,7 +180,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                     <p className="text-sm font-medium text-muted-foreground">Documentation</p>
                                     {project.docLinks && project.docLinks.length > 0 ? (
                                         <ul className="list-disc list-inside">
-                                            {project.docLinks.map(link => (
+                                            {project.docLinks.map((link: { id: string, url: string }) => (
                                                 <li key={link.id} className="text-sm">
                                                     <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
                                                         {link.url}

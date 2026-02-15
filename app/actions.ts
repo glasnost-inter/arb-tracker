@@ -5,8 +5,30 @@ import { redirect } from 'next/navigation'
 import { calculateSlaTarget } from '@/lib/sla'
 import { prisma } from '@/lib/prisma'
 
-import { writeFile } from 'fs/promises'
+import { writeFile, copyFile, mkdir } from 'fs/promises'
 import { join } from 'path'
+import { existsSync } from 'fs'
+
+async function backupDatabase() {
+    const dbPath = join(process.cwd(), 'dev.db')
+    const backupDir = join(process.cwd(), 'backups')
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const backupPath = join(backupDir, `dev_backup_${timestamp}.db`)
+
+    try {
+        if (!existsSync(backupDir)) {
+            await mkdir(backupDir, { recursive: true })
+        }
+        if (existsSync(dbPath)) {
+            await copyFile(dbPath, backupPath)
+            console.log(`Database backed up to ${backupPath}`)
+        }
+    } catch (error) {
+        console.error('Database backup failed:', error)
+        // We don't throw here to avoid blocking archival if backup fails, 
+        // but in a production system we might want to be stricter.
+    }
+}
 
 export async function submitProject(formData: FormData) {
     try {
@@ -38,7 +60,7 @@ export async function submitProject(formData: FormData) {
         const savedAttachments = []
 
         if (files && files.length > 0) {
-            const uploadDir = join(process.cwd(), 'public', 'uploads')
+            const uploadDir = join(process.cwd(), 'public', 'attachments')
             // Ensure directory exists (node 10+)
             await import('fs').then(fs => fs.promises.mkdir(uploadDir, { recursive: true }))
 
@@ -50,7 +72,7 @@ export async function submitProject(formData: FormData) {
                     await writeFile(uploadPath, buffer)
                     savedAttachments.push({
                         filename: file.name,
-                        path: `/uploads/${uniqueName}`
+                        path: `/attachments/${uniqueName}`
                     })
                 }
             }
@@ -144,14 +166,18 @@ export async function updateProject(id: string, formData: FormData) {
 
         // Handle Attachments (Append new ones)
         const files = formData.getAll('attachments') as File[]
-        const savedAttachments = []
+        const captions = formData.getAll('attachment_captions') as string[]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const savedAttachments: any[] = []
 
         if (files && files.length > 0) {
-            const uploadDir = join(process.cwd(), 'public', 'uploads')
-            // Ensure directory exists (node 10+)
+            const uploadDir = join(process.cwd(), 'public', 'attachments')
+            // Ensure directory exists
             await import('fs').then(fs => fs.promises.mkdir(uploadDir, { recursive: true }))
 
-            for (const file of files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i]
+                const caption = captions[i] || ''
                 if (file.size > 0 && file.name !== 'undefined') {
                     const buffer = Buffer.from(await file.arrayBuffer())
                     const uniqueName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
@@ -159,7 +185,8 @@ export async function updateProject(id: string, formData: FormData) {
                     await writeFile(uploadPath, buffer)
                     savedAttachments.push({
                         filename: file.name,
-                        path: `/uploads/${uniqueName}`
+                        path: `/attachments/${uniqueName}`,
+                        caption
                     })
                 }
             }
@@ -169,7 +196,11 @@ export async function updateProject(id: string, formData: FormData) {
             // Get current project data including attachments and tasks
             const project = await prisma.project.findUnique({
                 where: { id },
-                include: { attachments: true, followupTasks: true }
+                include: {
+                    attachments: true,
+                    followupTasks: true,
+                    docLinks: true
+                }
             })
 
             if (!project) throw new Error("Project not found")
@@ -185,7 +216,7 @@ export async function updateProject(id: string, formData: FormData) {
                         ownerSquad: project.ownerSquad,
                         pic: project.pic,
                         type: project.type,
-                        docLink: project.docLink,
+                        // docLink removed
                         submissionDate: project.submissionDate,
                         reviewDate: project.reviewDate,
                         decisionDate: project.decisionDate,
@@ -203,6 +234,8 @@ export async function updateProject(id: string, formData: FormData) {
                                 id: a.id,
                                 filename: a.filename,
                                 path: a.path,
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                mimeType: (a as any).mimeType, // Transfer mimeType
                                 createdAt: a.createdAt
                             }))
                         },
@@ -214,6 +247,11 @@ export async function updateProject(id: string, formData: FormData) {
                                 dueDate: t.dueDate,
                                 createdAt: t.createdAt,
                                 updatedAt: t.updatedAt
+                            }))
+                        },
+                        docLinks: {
+                            create: project.docLinks.map(d => ({
+                                url: d.url
                             }))
                         }
                     }
@@ -450,10 +488,9 @@ export async function getDistinctDocLinks() {
     }
 }
 
-export async function getProjectHistory(projectId: string) {
+export async function getProjectHistory(projectId: string): Promise<import('@prisma/client').ProjectHistory[]> {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const history = await (prisma as any).projectHistory.findMany({
+        const history = await prisma.projectHistory.findMany({
             where: { projectId },
             orderBy: { timestamp: 'desc' }
         })
@@ -467,22 +504,36 @@ export async function getProjectHistory(projectId: string) {
 // Helper to save files
 async function saveFiles(formData: FormData) {
     const files = formData.getAll('attachments') as File[]
-    const savedAttachments = []
+    const captions = formData.getAll('attachment_captions') as string[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const savedAttachments: any[] = []
 
     if (files && files.length > 0) {
-        const uploadDir = join(process.cwd(), 'public', 'uploads')
+        const uploadDir = join(process.cwd(), 'public', 'attachments')
         // Ensure directory exists (node 10+)
         await import('fs').then(fs => fs.promises.mkdir(uploadDir, { recursive: true }))
 
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            const caption = captions[i] || ''
             if (file.size > 0 && file.name !== 'undefined') {
                 const buffer = Buffer.from(await file.arrayBuffer())
                 const uniqueName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
                 const uploadPath = join(uploadDir, uniqueName)
                 await writeFile(uploadPath, buffer)
+
+                // Determine mimeType
+                let mimeType = file.type
+                if ((!mimeType || mimeType === 'application/octet-stream') && file.name.endsWith('.drawio')) {
+                    mimeType = 'application/vnd.jgraph.mxfile'
+                }
+                if (!mimeType) mimeType = 'application/octet-stream'
+
                 savedAttachments.push({
                     filename: file.name,
-                    path: `/uploads/${uniqueName}`
+                    path: `/attachments/${uniqueName}`,
+                    caption,
+                    mimeType
                 })
             }
         }
@@ -520,7 +571,7 @@ export async function submitSideQuest(formData: FormData) {
 
         // Save to DB
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (prisma as any).sideQuest.create({
+        const quest = await (prisma as any).sideQuest.create({
             data: {
                 ticketCode,
                 questName,
@@ -539,7 +590,7 @@ export async function submitSideQuest(formData: FormData) {
         })
 
         revalidatePath('/side-quest')
-        return { success: true, ticketCode }
+        return { success: true, ticketCode, id: quest.id }
     } catch (error) {
         console.error('Failed to submit side quest:', error)
         return { error: 'Failed to submit side quest' }
@@ -597,7 +648,8 @@ export async function addSideQuestFollowUp(formData: FormData) {
         // Handle Attachments
         const savedAttachments = await saveFiles(formData)
 
-        await prisma.sideQuestFollowUp.create({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (prisma as any).sideQuestFollowUp.create({
             data: {
                 sideQuestId,
                 action,
@@ -610,9 +662,9 @@ export async function addSideQuestFollowUp(formData: FormData) {
 
         revalidatePath(`/side-quest/${sideQuestId}`)
         return { success: true }
-    } catch (error) {
-        console.error('Failed to add follow-up:', error)
-        return { error: 'Failed to add follow-up' }
+    } catch (error: any) {
+        console.error('Failed to add side quest follow-up:', error)
+        return { error: `Follow-up creation failed: ${error.message || 'Unknown database error'}` }
     }
 }
 
@@ -620,27 +672,7 @@ export async function updateFollowupTask(taskId: string, formData: FormData) {
     try {
         const isCompleted = formData.get('isCompleted') === 'true'
         // Handle Attachments
-        const files = formData.getAll('attachments') as File[]
-        const savedAttachments = []
-
-        if (files && files.length > 0) {
-            const uploadDir = join(process.cwd(), 'public', 'uploads')
-            // Ensure directory exists (node 10+)
-            await import('fs').then(fs => fs.promises.mkdir(uploadDir, { recursive: true }))
-
-            for (const file of files) {
-                if (file.size > 0 && file.name !== 'undefined') {
-                    const buffer = Buffer.from(await file.arrayBuffer())
-                    const uniqueName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
-                    const uploadPath = join(uploadDir, uniqueName)
-                    await writeFile(uploadPath, buffer)
-                    savedAttachments.push({
-                        filename: file.name,
-                        path: `/uploads/${uniqueName}`
-                    })
-                }
-            }
-        }
+        const savedAttachments = await saveFiles(formData)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (prisma as any).followupTask.update({
@@ -670,5 +702,125 @@ export async function updateFollowupTask(taskId: string, formData: FormData) {
     } catch (error) {
         console.error('Failed to update follow-up task:', error)
         return { error: 'Failed to update follow-up task' }
+    }
+}
+
+export async function updateSideQuestStatus(sideQuestId: string, status: string) {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (prisma as any).sideQuest.update({
+            where: { id: sideQuestId },
+            data: { status }
+        })
+
+        revalidatePath(`/side-quest/${sideQuestId}`)
+        revalidatePath('/side-quest')
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to update side quest status:', error)
+        return { error: 'Failed to update side quest status' }
+    }
+}
+
+export async function archiveSideQuest(sideQuestId: string) {
+    try {
+        const quest = await prisma.sideQuest.findUnique({
+            where: { id: sideQuestId },
+            include: {
+                attachments: true,
+                followUps: {
+                    include: {
+                        attachments: true
+                    }
+                }
+            }
+        })
+
+        if (!quest) throw new Error("Side Quest not found")
+
+        // 0. Backup database before destructive operation (Charter Requirement)
+        await backupDatabase()
+
+        await prisma.$transaction(async (tx) => {
+            // 1. Create ArchivedSideQuest
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const archivedQuest = await (tx as any).archivedSideQuest.create({
+                data: {
+                    id: quest.id,
+                    ticketCode: quest.ticketCode,
+                    questName: quest.questName,
+                    instruction: quest.instruction,
+                    requestDate: quest.requestDate,
+                    requestor: quest.requestor,
+                    executor: quest.executor,
+                    dueDate: quest.dueDate,
+                    finishDate: quest.finishDate,
+                    impactScore: quest.impactScore,
+                    status: 'Archived',
+                    createdAt: quest.createdAt,
+                    archivedAt: new Date()
+                }
+            })
+
+            // 2. Create ArchivedSideQuestFollowUps and their attachments
+            for (const fu of quest.followUps) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const archivedFu = await (tx as any).archivedSideQuestFollowUp.create({
+                    data: {
+                        id: fu.id,
+                        sideQuestId: archivedQuest.id,
+                        date: fu.date,
+                        action: fu.action,
+                        createdAt: fu.createdAt
+                    }
+                })
+
+                if (fu.attachments && fu.attachments.length > 0) {
+                    for (const a of fu.attachments) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        await (tx as any).archivedAttachment.create({
+                            data: {
+                                id: a.id,
+                                filename: a.filename,
+                                path: a.path,
+                                caption: (a as any).caption,
+                                mimeType: (a as any).mimeType,
+                                createdAt: a.createdAt,
+                                sideQuestFollowUpId: archivedFu.id
+                            }
+                        })
+                    }
+                }
+            }
+
+            // 3. Create ArchivedAttachments for the main quest (polymorphic)
+            if (quest.attachments && quest.attachments.length > 0) {
+                for (const a of quest.attachments) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    await (tx as any).archivedAttachment.create({
+                        data: {
+                            id: a.id,
+                            filename: a.filename,
+                            path: a.path,
+                            caption: (a as any).caption,
+                            mimeType: (a as any).mimeType,
+                            createdAt: a.createdAt,
+                            sideQuestId: archivedQuest.id
+                        }
+                    })
+                }
+            }
+
+            // 4. Delete the original SideQuest (cascade deletes follow-ups and active attachments)
+            await tx.sideQuest.delete({
+                where: { id: sideQuestId }
+            })
+        })
+
+        revalidatePath('/side-quest')
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to archive side quest:', error)
+        return { error: 'Failed to archive side quest' }
     }
 }

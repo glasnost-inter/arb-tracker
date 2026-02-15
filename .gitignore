@@ -41,3 +41,14 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Database local files
+*.db
+*.sqlite
+*.sql
+!prisma/seed.ts
+data/
+backups/
+mysql_export.sql
+mysql_export_final.sql
+recovery_dump.sql

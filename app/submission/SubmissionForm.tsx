@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { submitProject, updateProject } from '../actions'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
+import { DatePicker } from '../components/ui/DatePicker'
+import { ImageUploaderWithCaption } from '../components/ui/ImageUploaderWithCaption'
 import { Label } from '../components/ui/Label'
 import { Select } from '../components/ui/Select'
 // import { Textarea } from '../components/ui/Textarea' // Removed
@@ -152,8 +154,13 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
         // Remove the dummy file input from formData
         formData.delete('attachments_dummy')
 
-        files.forEach(file => {
+        files.forEach((file, index) => {
             formData.append('attachments', file)
+            // We need to associate caption with the file.
+            // Since getAll('attachments') returns array, we can send a parallel array of captions?
+            // Or better, use JSON for metadata?
+            // Simplest: 'attachment_captions' array with same index order.
+            formData.append('attachment_captions', (file as any).caption || '')
         })
 
         try {
@@ -277,20 +284,18 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="submissionDate">Submission Date</Label>
-                            <Input
+                            <DatePicker
                                 id="submissionDate"
                                 name="submissionDate"
-                                type="date"
                                 defaultValue={formatDate(initialData?.submissionDate ?? new Date())}
                                 required
                             />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="reviewDate">Review Date</Label>
-                            <Input
+                            <DatePicker
                                 id="reviewDate"
                                 name="reviewDate"
-                                type="date"
                                 defaultValue={formatDate(initialData?.reviewDate)}
                             />
                         </div>
@@ -329,10 +334,9 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="decisionDate">Decision Date</Label>
-                            <Input
+                            <DatePicker
                                 id="decisionDate"
                                 name="decisionDate"
-                                type="date"
                                 defaultValue={formatDate(initialData?.decisionDate)}
                             />
                         </div>
@@ -379,10 +383,9 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                                     <div className="flex gap-2 items-center">
                                         <div className="flex-1">
                                             <Label htmlFor={`task-date-${index}`} className="text-xs text-muted-foreground mb-1 block">Due Date</Label>
-                                            <Input
+                                            <DatePicker
                                                 id={`task-date-${index}`}
                                                 name={`tasks[${index}].dueDate`}
-                                                type="date"
                                                 value={task.dueDate}
                                                 onChange={(e) => updateTask(index, 'dueDate', e.target.value)}
                                                 required
@@ -421,22 +424,22 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                     <CardDescription>Upload relevant documents (Max 20, up to 10MB each).</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md relative hover:bg-muted/50 transition-colors border-input">
-                        <div className="space-y-1 text-center">
-                            <svg className="mx-auto h-12 w-12 text-muted-foreground" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            <div className="flex text-sm text-muted-foreground justify-center">
-                                <label htmlFor="attachments" className="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary/90 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-ring">
-                                    <span>Upload files</span>
-                                    <input id="attachments" name="attachments_dummy" type="file" className="sr-only" multiple onChange={handleFileChange} ref={fileInputRef} />
-                                </label>
-                                <p className="pl-1">or drag and drop</p>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                PNG, JPG, PDF (Paste also supported)
-                            </p>
-                        </div>
+                    <div className="mt-1">
+                        <ImageUploaderWithCaption
+                            onUpload={async (file, caption) => {
+                                // Add to local state (wrapper as File with caption metadata is tricky since File is immutable)
+                                // We can wrap it in a local object
+                                // But handleSubmit expects 'files' array.
+                                // We also need to send captions.
+                                // Let's just store them in a new state `pendingAttachments: {file: File, caption: string}[]`
+                                // For now, let's adapt:
+                                const newFile = file as any
+                                newFile.caption = caption
+                                setFiles(prev => [...prev, newFile])
+                            }}
+                            triggerText="Paste image or click to upload"
+                            className="w-full"
+                        />
                     </div>
 
                     {files.length > 0 && (
@@ -446,7 +449,10 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                                 {files.map((file, index) => (
                                     <li key={index} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
                                         <div className="w-0 flex-1 flex items-center">
-                                            <span className="truncate">{file.name}</span>
+                                            <div className="flex flex-col">
+                                                <span className="truncate font-medium">{file.name}</span>
+                                                {(file as any).caption && <span className="text-xs text-muted-foreground italic truncate">"{(file as any).caption}"</span>}
+                                            </div>
                                             <span className="ml-2 text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
                                         </div>
                                         <div className="ml-4 flex-shrink-0">

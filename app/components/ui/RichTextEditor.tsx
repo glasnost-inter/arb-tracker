@@ -166,12 +166,28 @@ const RichTextEditor = ({ value, onChange, placeholder, className }: RichTextEdi
     })
 
     // Sync external value changes (e.g. form reset or initial load async)
+    // Sync external value changes (e.g. form reset or initial load async)
     useEffect(() => {
-        if (editor && value !== editor.getHTML()) {
-            // Compare text content to avoid HTML formatting drift loops?
-            // Or just check if editor is empty and value is not.
-            // For now, only update if editor is empty to avoid overwriting user valid input.
-            if (editor.isEmpty && value) {
+        if (!editor) return
+
+        const currentContent = editor.getHTML()
+
+        // If value is empty and editor is not (e.g. form reset), clear editor
+        if (!value && !editor.isEmpty) {
+            editor.commands.setContent('')
+            return
+        }
+
+        // If value is provided and different (e.g. async load), set content.
+        // We avoid seeting content if it's strictly equal to prevent cursor jumps on controlled input loops.
+        // Note: This simple check might not catch all semantic equivalences, but suffices for basic flows.
+        if (value && value !== currentContent) {
+            // Only update if the editor is empty OR if the content is drastically different 
+            // (to avoid interfering with typing). 
+            // For a simple form, usually we only load initial data. 
+            // If we really need fully controlled input, we'd need more complex cursor management.
+            // Here we prioritize: Initial Load > Form Reset > External Updates
+            if (editor.isEmpty) {
                 editor.commands.setContent(value)
             }
         }

@@ -2,27 +2,34 @@ erDiagram
 
     %% User and Authentication (Implicit / Future)
     %% Currently, User is represented implicitly via strings (PIC, Actor, Requestor)
-    %% User ||--o{ Project : "manages/owns"
-    %% User ||--o{ SideQuest : "requests/executes"
 
-    %% Project / Submission Management
     Project {
         String id PK
         String name
         String description
-        String ownerSquad "FK to Squad.name (Conceptually)"
-        String pic "Person In Charge"
+        String ownerSquad
+        String pic
         String type
         DateTime submissionDate
         DateTime reviewDate
         DateTime decisionDate
-        String status "Submitted, In-Review, Approved, Rejected"
+        String status
         String decision
         String mitigationNotes
         String adrNumber
         String notes
         Int slaDuration
         DateTime slaTarget
+        DateTime createdAt
+        DateTime updatedAt
+    }
+
+    FollowupTask {
+        String id PK
+        String description
+        Boolean isCompleted
+        DateTime dueDate
+        String projectId FK
         DateTime createdAt
         DateTime updatedAt
     }
@@ -38,8 +45,13 @@ erDiagram
         String id PK
         String filename
         String path
-        String projectId FK
+        String caption
+        String mimeType
         DateTime createdAt
+        String projectId FK "Optional"
+        String followupTaskId FK "Optional"
+        String sideQuestId FK "Optional"
+        String sideQuestFollowUpId FK "Optional"
     }
 
     ProjectHistory {
@@ -47,7 +59,7 @@ erDiagram
         String projectId FK
         String changes "JSON"
         DateTime timestamp
-        String actor "User who made the change"
+        String actor
     }
 
     Squad {
@@ -78,6 +90,16 @@ erDiagram
         DateTime archivedAt
     }
 
+    ArchivedFollowupTask {
+        String id PK
+        String description
+        Boolean isCompleted
+        DateTime dueDate
+        String projectArchivedId FK
+        DateTime createdAt
+        DateTime updatedAt
+    }
+
     ArchivedDocumentationLink {
         String id PK
         String url
@@ -88,8 +110,12 @@ erDiagram
         String id PK
         String filename
         String path
-        String projectId FK
+        String mimeType
+        String caption
         DateTime createdAt
+        String archivedProjectId FK "Optional"
+        String archivedSideQuestId FK "Optional"
+        String archivedSideQuestFollowUpId FK "Optional"
     }
 
     %% Side Quest System
@@ -116,19 +142,28 @@ erDiagram
         DateTime createdAt
     }
 
-    SideQuestAttachment {
+    %% Archival System (Side Quest)
+    ArchivedSideQuest {
         String id PK
-        String filename
-        String path
-        String sideQuestId FK
+        String ticketCode
+        String questName
+        String instruction
+        DateTime requestDate
+        String requestor
+        String executor
+        DateTime dueDate
+        DateTime finishDate
+        Int impactScore
+        String status
         DateTime createdAt
+        DateTime archivedAt
     }
 
-    SideQuestFollowUpAttachment {
+    ArchivedSideQuestFollowUp {
         String id PK
-        String filename
-        String path
-        String sideQuestFollowUpId FK
+        String archivedSideQuestId FK
+        DateTime date
+        String action
         DateTime createdAt
     }
 
@@ -136,11 +171,19 @@ erDiagram
     Project ||--o{ DocumentationLink : "has"
     Project ||--o{ Attachment : "has files"
     Project ||--o{ ProjectHistory : "has history"
-    Project }o..|| Squad : "owned by (loose relation)"
+    Project ||--o{ FollowupTask : "has tasks"
+    Project }o..|| Squad : "owned by"
+
+    FollowupTask ||--o{ Attachment : "has files"
 
     ArchivedProject ||--o{ ArchivedDocumentationLink : "has"
     ArchivedProject ||--o{ ArchivedAttachment : "has files"
+    ArchivedProject ||--o{ ArchivedFollowupTask : "has tasks"
 
     SideQuest ||--o{ SideQuestFollowUp : "has follow-ups"
-    SideQuest ||--o{ SideQuestAttachment : "has files"
-    SideQuestFollowUp ||--o{ SideQuestFollowUpAttachment : "has files"
+    SideQuest ||--o{ Attachment : "has files"
+    SideQuestFollowUp ||--o{ Attachment : "has files"
+
+    ArchivedSideQuest ||--o{ ArchivedSideQuestFollowUp : "has follow-ups"
+    ArchivedSideQuest ||--o{ ArchivedAttachment : "has files"
+    ArchivedSideQuestFollowUp ||--o{ ArchivedAttachment : "has files"

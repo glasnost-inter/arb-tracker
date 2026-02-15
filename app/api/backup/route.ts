@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 export async function GET() {
-    const dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
+    const dbPath = path.join(process.cwd(), 'dev.db');
 
     if (!fs.existsSync(dbPath)) {
         return NextResponse.json({ error: 'Database file not found' }, { status: 404 });

@@ -1,0 +1,23 @@
+
+> arb-tracker@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.18.15:3000
+- Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+✓ Starting...
+✓ Ready in 1230ms
+ GET / 200 in 2.4s (compile: 871ms, render: 1559ms)
+ GET /side-quest 200 in 2.4s (compile: 1028ms, render: 1416ms)
+Fetching project with ID: 0309c90d-6ca4-4ef7-b587-44c514b148b7 (type: string)
+Project fetched: null
+ GET /submission/0309c90d-6ca4-4ef7-b587-44c514b148b7/edit 404 in 3.7s (compile: 3.7s, render: 86ms)
+Fetching project with ID: 0309c90d-6ca4-4ef7-b587-44c514b148b7 (type: string)
+Project fetched: null
+ GET /side-quest/98423776-e220-4381-9338-fc3db692cb1c 404 in 4.9s (compile: 4.8s, render: 133ms)
+ GET /submission/0309c90d-6ca4-4ef7-b587-44c514b148b7 404 in 5.0s (compile: 4.9s, render: 113ms)
+ GET / 200 in 74ms (compile: 33ms, render: 42ms)
