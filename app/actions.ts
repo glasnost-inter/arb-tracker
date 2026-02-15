@@ -92,12 +92,20 @@ export async function submitProject(formData: FormData) {
 
             const dueDateStr = formData.get(`tasks[${taskIndex}].dueDate`) as string
             const isCompletedStr = formData.get(`tasks[${taskIndex}].isCompleted`) as string
+            const action = formData.get(`tasks[${taskIndex}].action`) as string
 
             if (description) {
+                // Handle task-specific attachments
+                const taskAttachments = await saveFiles(formData, `tasks[${taskIndex}]`)
+
                 tasks.push({
                     description: description as string,
+                    action: action || null,
                     dueDate: new Date(dueDateStr),
-                    isCompleted: isCompletedStr === 'true'
+                    isCompleted: isCompletedStr === 'true',
+                    attachments: {
+                        create: taskAttachments
+                    }
                 })
             }
             taskIndex++
@@ -243,6 +251,7 @@ export async function updateProject(id: string, formData: FormData) {
                             create: project.followupTasks.map(t => ({
                                 id: t.id,
                                 description: t.description,
+                                action: t.action,
                                 isCompleted: t.isCompleted,
                                 dueDate: t.dueDate,
                                 createdAt: t.createdAt,
@@ -349,13 +358,19 @@ export async function updateProject(id: string, formData: FormData) {
                 const dueDateStr = formData.get(`tasks[${taskIndex}].dueDate`) as string
                 const id = formData.get(`tasks[${taskIndex}].id`) as string
                 const isCompletedStr = formData.get(`tasks[${taskIndex}].isCompleted`) as string
+                const action = formData.get(`tasks[${taskIndex}].action`) as string
 
                 if (description) {
+                    // Handle task-specific attachments
+                    const taskAttachments = await saveFiles(formData, `tasks[${taskIndex}]`)
+
                     submittedTasks.push({
                         id: id || undefined,
                         description: description as string,
+                        action: action || null,
                         dueDate: new Date(dueDateStr),
-                        isCompleted: isCompletedStr === 'true'
+                        isCompleted: isCompletedStr === 'true',
+                        attachments: taskAttachments // Store for processing below
                     })
                 }
                 taskIndex++
@@ -380,22 +395,30 @@ export async function updateProject(id: string, formData: FormData) {
 
             for (const task of submittedTasks) {
                 if (task.id) {
-                    await prisma.followupTask.update({
+                    await (prisma as any).followupTask.update({
                         where: { id: task.id },
                         data: {
                             description: task.description,
+                            action: task.action,
                             dueDate: task.dueDate,
-                            isCompleted: task.isCompleted
-                        }
+                            isCompleted: task.isCompleted,
+                            attachments: {
+                                create: task.attachments
+                            }
+                        } as any
                     })
                 } else {
-                    await prisma.followupTask.create({
+                    await (prisma as any).followupTask.create({
                         data: {
                             projectId: id,
                             description: task.description,
+                            action: task.action,
                             dueDate: task.dueDate,
-                            isCompleted: task.isCompleted
-                        }
+                            isCompleted: task.isCompleted,
+                            attachments: {
+                                create: task.attachments
+                            }
+                        } as any
                     })
                 }
             }
@@ -502,9 +525,12 @@ export async function getProjectHistory(projectId: string): Promise<import('@pri
 }
 
 // Helper to save files
-async function saveFiles(formData: FormData) {
-    const files = formData.getAll('attachments') as File[]
-    const captions = formData.getAll('attachment_captions') as string[]
+async function saveFiles(formData: FormData, keyPrefix: string = '') {
+    const attachmentKey = keyPrefix ? `${keyPrefix}.attachments` : 'attachments'
+    const captionKey = keyPrefix ? `${keyPrefix}.attachment_captions` : 'attachment_captions'
+
+    const files = formData.getAll(attachmentKey) as File[]
+    const captions = formData.getAll(captionKey) as string[]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const savedAttachments: any[] = []
 
@@ -671,18 +697,22 @@ export async function addSideQuestFollowUp(formData: FormData) {
 export async function updateFollowupTask(taskId: string, formData: FormData) {
     try {
         const isCompleted = formData.get('isCompleted') === 'true'
+        const action = formData.get('action') as string
         // Handle Attachments
         const savedAttachments = await saveFiles(formData)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const updateData: any = {
+            isCompleted,
+            action: action || null,
+            attachments: {
+                create: savedAttachments
+            }
+        }
+
         await (prisma as any).followupTask.update({
             where: { id: taskId },
-            data: {
-                isCompleted,
-                attachments: {
-                    create: savedAttachments
-                }
-            }
+            data: updateData
         })
 
         revalidatePath('/')

@@ -1,9 +1,0 @@
--- CreateTable
-CREATE TABLE "SideQuestFollowUp" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "sideQuestId" TEXT NOT NULL,
-    "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "action" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "SideQuestFollowUp_sideQuestId_fkey" FOREIGN KEY ("sideQuestId") REFERENCES "SideQuest" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);

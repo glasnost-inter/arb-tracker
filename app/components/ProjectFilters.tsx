@@ -133,6 +133,19 @@ export default function ProjectFilters() {
                             Clear Filters
                         </Button>
                     )}
+
+                    <div className="flex items-center space-x-2 pt-6">
+                        <input
+                            type="checkbox"
+                            id="pending-tasks-filter"
+                            checked={searchParams.get('hasPendingTasks') === 'true'}
+                            onChange={(e) => updateFilter('hasPendingTasks', e.target.checked ? 'true' : '')}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <Label htmlFor="pending-tasks-filter" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            Show only projects with pending follow-up tasks
+                        </Label>
+                    </div>
                 </div>
 
                 {/* Dynamic Sorting Section */}

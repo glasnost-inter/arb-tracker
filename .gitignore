@@ -52,3 +52,4 @@ backups/
 mysql_export.sql
 mysql_export_final.sql
 recovery_dump.sql
+/public/attachments/

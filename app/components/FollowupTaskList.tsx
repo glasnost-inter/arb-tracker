@@ -7,6 +7,8 @@ import { Button } from './ui/Button'
 import { Card, CardContent } from './ui/Card'
 import { Input } from './ui/Input'
 import { Label } from './ui/Label'
+import { ImageUploaderWithCaption } from './ui/ImageUploaderWithCaption'
+import RichTextEditor from './ui/RichTextEditor'
 
 type FollowupTaskWithAttachments = {
     id: string
@@ -28,8 +30,9 @@ export default function FollowupTaskList({ tasks }: { tasks: FollowupTaskWithAtt
 
 function TaskItem({ task }: { task: FollowupTaskWithAttachments }) {
     const [isCompleted, setIsCompleted] = useState(task.isCompleted)
+    const [action, setAction] = useState((task as any).action || '')
     const [isUploading, setIsUploading] = useState(false)
-    const [files, setFiles] = useState<FileList | null>(null)
+    const [pendingFiles, setPendingFiles] = useState<{ file: File, caption: string }[]>([])
 
     const toggleComplete = async () => {
         const newState = !isCompleted
@@ -37,30 +40,27 @@ function TaskItem({ task }: { task: FollowupTaskWithAttachments }) {
 
         const formData = new FormData()
         formData.append('isCompleted', String(newState))
+        formData.append('action', action)
 
         await updateFollowupTask(task.id, formData)
     }
 
-    const handleUpload = async (e: React.FormEvent) => {
+    const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!files || files.length === 0) return
-
         setIsUploading(true)
         const formData = new FormData()
-        // Maintain current completion status
         formData.append('isCompleted', String(isCompleted))
+        formData.append('action', action)
 
-        for (let i = 0; i < files.length; i++) {
-            formData.append('attachments', files[i])
-        }
+        pendingFiles.forEach(pf => {
+            formData.append('attachments', pf.file)
+            formData.append('attachment_captions', pf.caption)
+        })
 
         await updateFollowupTask(task.id, formData)
 
         setIsUploading(false)
-        setFiles(null)
-        // Reset file input value
-        // Note: For full UX we might want to refresh the list of attachments here
-        // but server action revalidates path, so page should reload/refresh.
+        setPendingFiles([])
     }
 
     return (
@@ -106,20 +106,56 @@ function TaskItem({ task }: { task: FollowupTaskWithAttachments }) {
                         </div>
                     )}
 
+                    <div className="space-y-1">
+                        <Label htmlFor={`task-action-${task.id}`} className="text-xs text-muted-foreground">Action / Completion Notes</Label>
+                        <RichTextEditor
+                            value={action}
+                            onChange={(val) => setAction(val)}
+                            placeholder="Describe what has been done..."
+                            className="min-h-[100px] text-xs"
+                        />
+                    </div>
+
                     {/* Upload Section */}
                     <div className="mt-3 pt-2 border-t border-border/50">
-                        <label className="text-xs font-medium mb-1 block">Add Evidence</label>
-                        <form onSubmit={handleUpload} className="flex gap-2 items-center">
-                            <Input
-                                type="file"
-                                multiple
-                                className="h-8 text-xs py-1"
-                                onChange={(e) => setFiles(e.target.files)}
+                        <label className="text-xs font-medium mb-1 block">Add Evidence / Save Action</label>
+
+                        <div className="space-y-2">
+                            <ImageUploaderWithCaption
+                                onUpload={async (file, caption) => {
+                                    setPendingFiles(prev => [...prev, { file, caption }])
+                                }}
+                                triggerText="Paste image or click to upload evidence"
+                                className="w-full"
                             />
-                            <Button size="sm" type="submit" disabled={!files || isUploading} variant="secondary" className="h-8 text-xs">
-                                {isUploading ? 'Uploading...' : 'Upload'}
+
+                            {pendingFiles.length > 0 && (
+                                <ul className="text-[10px] space-y-1 bg-background/50 p-2 rounded border border-dashed text-muted-foreground">
+                                    {pendingFiles.map((pf, idx) => (
+                                        <li key={idx} className="flex justify-between items-center">
+                                            <span className="truncate max-w-[150px]">{pf.file.name} {pf.caption && `(${pf.caption})`}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPendingFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                className="text-destructive hover:underline"
+                                            >
+                                                Remove
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+
+                            <Button
+                                size="sm"
+                                onClick={handleUpdate}
+                                disabled={isUploading || (pendingFiles.length === 0 && action === (task as any).action)}
+                                variant="secondary"
+                                className="w-full h-8 text-xs font-semibold"
+                            >
+                                {isUploading ? 'Saving...' : 'Save Changes & Evidence'}
                             </Button>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>

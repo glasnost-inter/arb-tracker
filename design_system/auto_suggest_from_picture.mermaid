@@ -1,0 +1,10 @@
+graph TD
+    A([start]) --> B[open page project submission]
+    B --> C[/input gambar / text/ pdf]
+    C --> D[berikan sugest dari akan masuk ke field mana. buatkan preview field untuk menentukan apakah setuju atau mau ada edit]
+    D --> E{setuju?}
+    
+    E -- ya --> F[simpan data project]
+    E -- tidak --> C
+    
+    F --> G([selesai])

@@ -16,6 +16,7 @@ type Attachment = {
 type FollowupTask = {
     id: string
     description: string
+    action?: string | null
     isCompleted: boolean
     dueDate: Date
     completedAt?: Date | null
@@ -118,6 +119,16 @@ function AccordionItem({ task }: { task: FollowupTask }) {
                         className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground mt-4"
                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.description) }}
                     />
+
+                    {task.action && (
+                        <div className="mt-4 p-3 rounded-md bg-muted/30 border-l-4 border-primary">
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Action / Mitigation Taken:</p>
+                            <div
+                                className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.action) }}
+                            />
+                        </div>
+                    )}
 
                     {/* Direct Image Preview */}
                     {task.attachments && task.attachments.some(att => isImage(att.filename)) && (

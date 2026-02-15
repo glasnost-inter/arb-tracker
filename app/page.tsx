@@ -6,6 +6,7 @@ import { Container } from './components/ui/Container'
 import { Button } from './components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from './components/ui/Card'
 import { Badge } from './components/ui/Badge'
+import { ClipboardList, CheckCircle } from 'lucide-react'
 
 // Define a type for the project structure we need
 type Project = {
@@ -23,9 +24,10 @@ type Project = {
   slaTarget: Date
   createdAt: Date
   updatedAt: Date
+  followupTasks: { isCompleted: boolean }[]
 }
 
-async function getProjects(status?: string, decision?: string, sortByStr: string = 'updatedAt-desc', search?: string): Promise<Project[]> {
+async function getProjects(status?: string, decision?: string, sortByStr: string = 'updatedAt-desc', search?: string, hasPendingTasks?: boolean): Promise<Project[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {}
   if (status) where.status = status
@@ -35,6 +37,15 @@ async function getProjects(status?: string, decision?: string, sortByStr: string
       contains: search,
     }
   }
+
+  // The hasPendingTasks filter will now be applied client-side after fetching all tasks
+  // if (hasPendingTasks) {
+  //   where.followupTasks = {
+  //     some: {
+  //       isCompleted: false
+  //     }
+  //   }
+  // }
 
   // Parse sortBy string: "field-dir,field2-dir2"
   const orderBy = sortByStr.split(',').map(s => {
@@ -49,21 +60,33 @@ async function getProjects(status?: string, decision?: string, sortByStr: string
 
   const projects = await prisma.project.findMany({
     where,
-    orderBy: orderBy
+    orderBy: orderBy,
+    include: {
+      followupTasks: {
+        select: { isCompleted: true }
+      }
+    }
   })
+
+  // Apply hasPendingTasks filter after fetching all tasks
+  if (hasPendingTasks) {
+    return projects.filter(project => project.followupTasks.some(task => !task.isCompleted));
+  }
+
   return projects
 }
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const resolvedSearchParams = await searchParams
   /* eslint-disable prefer-const */
-  let { status, decision, sortBy } = resolvedSearchParams
+  let { status, decision, sortBy, hasPendingTasks } = resolvedSearchParams
 
   status = typeof status === 'string' ? status : undefined
   decision = typeof decision === 'string' ? decision : undefined
   const sortByStr = typeof sortBy === 'string' ? sortBy : 'updatedAt-desc'
+  const showPendingOnly = hasPendingTasks === 'true'
 
-  const projects = await getProjects(status, decision, sortByStr)
+  const projects = await getProjects(status, decision, sortByStr, undefined, showPendingOnly)
 
   const getSlaBadgeVariant = (status: SlaStatus) => {
     switch (status) {
@@ -103,6 +126,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <div className="space-y-4">
           {projects.map((project) => {
             const slaStatus = getSlaStatus(project)
+            const pendingTasks = project.followupTasks.filter(t => !t.isCompleted).length
+            const completedTasks = project.followupTasks.filter(t => t.isCompleted).length
+
             return (
               <Card key={project.id}>
                 <CardHeader className="pb-2">
@@ -117,9 +143,23 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                         {project.ownerSquad} • {project.type}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-base font-normal px-3 py-1">
-                      {project.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {completedTasks > 0 && (
+                        <Badge variant="secondary" className="flex items-center gap-1 font-normal bg-green-100 text-green-800 hover:bg-green-200 border-green-200">
+                          <CheckCircle className="h-3 w-3" />
+                          {completedTasks} Done
+                        </Badge>
+                      )}
+                      {pendingTasks > 0 && (
+                        <Badge variant="destructive" className="flex items-center gap-1 font-normal">
+                          <ClipboardList className="h-3 w-3" />
+                          {pendingTasks} Tasks
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-base font-normal px-3 py-1">
+                        {project.status}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pb-2">
@@ -159,3 +199,4 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     </div>
   )
 }
+

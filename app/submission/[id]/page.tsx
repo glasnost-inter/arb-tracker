@@ -135,7 +135,35 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                 {history && history.length > 0 ? (
                                     <div className="relative border-l border-muted ml-3 space-y-6">
                                         {history.map((log) => {
-                                            const changes = JSON.parse(log.changes) as { field: string, old: string, new: string }[]
+                                            let changes: { field: string, old: string, new: string }[] = []
+                                            try {
+                                                // Workaround for corrupted data: Normalize whitespace and handle unescaped quotes
+                                                // within the "old" and "new" values.
+                                                const cleanJson = log.changes
+                                                    .replace(/[\n\r]/g, '\\n')
+                                                    .replace(/\t/g, '\\t');
+
+                                                // Very common issue: "old":"... "nested" ..." -> unescaped "
+                                                // This regex attempt to escape quotes that are NOT part of the JSON structure.
+                                                // But since it's risky, we'll try to just parse it first.
+                                                try {
+                                                    changes = JSON.parse(cleanJson)
+                                                } catch (parseError) {
+                                                    // Emergency sanitization: find quotes inside the long strings
+                                                    // This is a basic heuristic: look for "field":"..." pattern
+                                                    // and escape quotes within the ... part.
+                                                    const sanitized = cleanJson.replace(/("(?:old|new)":\s*")([\s\S]*?)("\s*(?:,|\]|\}))/g, (match, p1, p2, p3) => {
+                                                        // Escape any double quotes in p2 that aren't already escaped
+                                                        const escapedContent = p2.replace(/(?<!\\)"/g, '\\"');
+                                                        return p1 + escapedContent + p3;
+                                                    });
+                                                    changes = JSON.parse(sanitized)
+                                                }
+                                            } catch (e) {
+                                                console.error("Failed to parse log changes (even after sanitization):", log.changes)
+                                                changes = [{ field: 'Error', old: '-', new: 'Data corrupt / invalid JSON' }]
+                                            }
+
                                             return (
                                                 <div key={log.id} className="ml-6 relative">
                                                     <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-primary ring-4 ring-background" />

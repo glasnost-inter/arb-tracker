@@ -8,148 +8,133 @@ datasource db {
 }
 
 model Project {
-  id              String   @id @default(uuid())
-  
-  // Identitas Proyek
+  id              String              @id @default(uuid())
   name            String
-  description     String?
+  description     String?             @db.Text
   ownerSquad      String
   pic             String
-
-  // Detail Arsitektur
-  type            String   // New Service / Major Change
-  docLinks        DocumentationLink[]
-  
-  // Timeline & Governance
-  submissionDate  DateTime @default(now())
+  type            String
+  submissionDate  DateTime            @default(now())
   reviewDate      DateTime?
-  decisionDate    DateTime? // Tanggal Keputusan
-  status          String   @default("Submitted") // Submitted, In-Review, Approved, Rejected
-
-  // Hasil Akhir
+  decisionDate    DateTime?
+  status          String              @default("Submitted")
   decision        String?
-  mitigationNotes String?
+  mitigationNotes String?             @db.Text
   adrNumber       String?
-  notes           String?
-  slaDuration     Int      @default(5)
-  slaTarget       DateTime // Calculated: submissionDate + slaDuration working days
-
+  notes           String?             @db.Text
+  slaDuration     Int                 @default(5)
+  slaTarget       DateTime
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   attachments     Attachment[]
-  history         ProjectHistory[]
+  docLinks        DocumentationLink[]
   followupTasks   FollowupTask[]
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  history         ProjectHistory[]
 }
 
 model FollowupTask {
-  id          String   @id @default(uuid())
-  description String
-  isCompleted Boolean  @default(false)
+  id          String       @id @default(uuid())
+  description String       @db.Text
+  isCompleted Boolean      @default(false)
   dueDate     DateTime
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  action      String?      @db.Text
   attachments Attachment[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-// Removed FollowupTaskAttachment
-// model FollowupTaskAttachment { ... }
+  @@index([projectId], map: "FollowupTask_projectId_fkey")
+}
 
 model DocumentationLink {
   id        String   @id @default(uuid())
-  url       String
+  url       String   @db.Text
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId], map: "DocumentationLink_projectId_fkey")
 }
 
-
 model Attachment {
-  id                  String   @id @default(uuid())
+  id                  String             @id @default(uuid())
   filename            String
   path                String
   caption             String?
-  mimeType            String   @default("application/octet-stream") // New field
-  createdAt           DateTime @default(now())
-
-  // Polymorphic Relations (Optional FKs)
+  mimeType            String             @default("application/octet-stream")
+  createdAt           DateTime           @default(now())
   projectId           String?
-  project             Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
   followupTaskId      String?
-  followupTask        FollowupTask? @relation(fields: [followupTaskId], references: [id], onDelete: Cascade)
-
   sideQuestId         String?
-  sideQuest           SideQuest? @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
-
   sideQuestFollowUpId String?
+  followupTask        FollowupTask?      @relation(fields: [followupTaskId], references: [id], onDelete: Cascade)
+  project             Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sideQuestFollowUp   SideQuestFollowUp? @relation(fields: [sideQuestFollowUpId], references: [id], onDelete: Cascade)
+  sideQuest           SideQuest?         @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
+
+  @@index([followupTaskId], map: "Attachment_followupTaskId_fkey")
+  @@index([projectId], map: "Attachment_projectId_fkey")
+  @@index([sideQuestFollowUpId], map: "Attachment_sideQuestFollowUpId_fkey")
+  @@index([sideQuestId], map: "Attachment_sideQuestId_fkey")
 }
 
 model Squad {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
+  id   Int    @id @default(autoincrement())
+  name String @unique
 }
 
 model ArchivedProject {
-  id              String   @id
-  
-  // Identitas Proyek
+  id              String                      @id
   name            String
-  description     String?
+  description     String?                     @db.Text
   ownerSquad      String
   pic             String
-
-  // Detail Arsitektur
-  type            String   // New Service / Major Change
-  docLinks        ArchivedDocumentationLink[]
-  
-  // Timeline & Governance
+  type            String
   submissionDate  DateTime
   reviewDate      DateTime?
   decisionDate    DateTime?
-  status          String 
-
-  // Hasil Akhir
+  status          String
   decision        String?
-  mitigationNotes String?
+  mitigationNotes String?                     @db.Text
   adrNumber       String?
-  notes           String?
+  notes           String?                     @db.Text
   slaDuration     Int
   slaTarget       DateTime
-
-  attachments     ArchivedAttachment[]
-  followupTasks   ArchivedFollowupTask[]
-
   createdAt       DateTime
   updatedAt       DateTime
-  archivedAt      DateTime @default(now())
+  archivedAt      DateTime                    @default(now())
+  attachments     ArchivedAttachment[]
+  docLinks        ArchivedDocumentationLink[]
+  followupTasks   ArchivedFollowupTask[]
 }
 
 model ArchivedFollowupTask {
-  id                String          @id @default(uuid())
-  description       String
+  id                String               @id @default(uuid())
+  description       String               @db.Text
   isCompleted       Boolean
   dueDate           DateTime
   projectArchivedId String
-  projectArchived   ArchivedProject @relation(fields: [projectArchivedId], references: [id], onDelete: Cascade)
-  attachments       ArchivedAttachment[]
   createdAt         DateTime
   updatedAt         DateTime
+  action            String?              @db.Text
+  attachments       ArchivedAttachment[]
+  projectArchived   ArchivedProject      @relation(fields: [projectArchivedId], references: [id], onDelete: Cascade)
+
+  @@index([projectArchivedId], map: "ArchivedFollowupTask_projectArchivedId_fkey")
 }
 
-
 model ArchivedDocumentationLink {
-  id        String   @id @default(uuid())
-  url       String
+  id        String          @id @default(uuid())
+  url       String          @db.Text
   projectId String
-  project   ArchivedProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   ArchivedProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId], map: "ArchivedDocumentationLink_projectId_fkey")
 }
 
 model ArchivedSideQuest {
-  id          String   @id
+  id          String                      @id
   ticketCode  String
   questName   String
   instruction String
@@ -161,81 +146,81 @@ model ArchivedSideQuest {
   impactScore Int
   status      String
   createdAt   DateTime
-  archivedAt  DateTime @default(now())
-
-  followUps   ArchivedSideQuestFollowUp[]
+  archivedAt  DateTime                    @default(now())
   attachments ArchivedAttachment[]
+  followUps   ArchivedSideQuestFollowUp[]
 }
 
 model ArchivedSideQuestFollowUp {
-  id                String    @id
-  sideQuestId       String
-  sideQuest         ArchivedSideQuest @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
-  date              DateTime
-  action            String
-  createdAt         DateTime
-  attachments       ArchivedAttachment[]
+  id          String               @id
+  sideQuestId String
+  date        DateTime
+  action      String               @db.Text
+  createdAt   DateTime
+  attachments ArchivedAttachment[]
+  sideQuest   ArchivedSideQuest    @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
+
+  @@index([sideQuestId], map: "ArchivedSideQuestFollowUp_sideQuestId_fkey")
 }
 
 model ArchivedAttachment {
-  id                      String                @id
-  filename                String
-  path                    String
-  caption                 String?
-  mimeType                String                @default("application/octet-stream")
-  createdAt               DateTime
+  id                     String                     @id
+  filename               String
+  path                   String
+  caption                String?
+  mimeType               String                     @default("application/octet-stream")
+  createdAt              DateTime
+  projectId              String?
+  sideQuestId            String?
+  sideQuestFollowUpId    String?
+  archivedFollowupTaskId String?
+  archivedFollowupTask   ArchivedFollowupTask?      @relation(fields: [archivedFollowupTaskId], references: [id], onDelete: Cascade)
+  project                ArchivedProject?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sideQuestFollowUp      ArchivedSideQuestFollowUp? @relation(fields: [sideQuestFollowUpId], references: [id], onDelete: Cascade)
+  sideQuest              ArchivedSideQuest?         @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
 
-  // Polymorphic relations for archives
-  projectId               String?
-  project                 ArchivedProject?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  sideQuestId             String?
-  sideQuest               ArchivedSideQuest?    @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
-
-  sideQuestFollowUpId     String?
-  sideQuestFollowUp       ArchivedSideQuestFollowUp? @relation(fields: [sideQuestFollowUpId], references: [id], onDelete: Cascade)
-
-  archivedFollowupTaskId  String?
-  archivedFollowupTask    ArchivedFollowupTask? @relation(fields: [archivedFollowupTaskId], references: [id], onDelete: Cascade)
+  @@index([archivedFollowupTaskId], map: "ArchivedAttachment_archivedFollowupTaskId_fkey")
+  @@index([projectId], map: "ArchivedAttachment_projectId_fkey")
+  @@index([sideQuestFollowUpId], map: "ArchivedAttachment_sideQuestFollowUpId_fkey")
+  @@index([sideQuestId], map: "ArchivedAttachment_sideQuestId_fkey")
 }
 
 model ProjectHistory {
   id        String   @id @default(uuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  changes   String   // JSON string of changes: [{ field: "Status", old: "X", new: "Y" }]
+  changes   String   @db.LongText
   timestamp DateTime @default(now())
-  actor     String?  // Name/ID of user who made the change
+  actor     String?
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId], map: "ProjectHistory_projectId_fkey")
 }
 
 model SideQuest {
-  id          String   @id @default(uuid())
+  id          String              @id @default(uuid())
   ticketCode  String
-  questName   String   @default("Untitled Quest")
-  instruction String
-  requestDate DateTime @default(now())
-  requestor   String   @default("Unknown")
+  questName   String              @default("Untitled Quest")
+  instruction String              @db.Text
+  requestDate DateTime            @default(now())
+  requestor   String              @default("Unknown")
   executor    String?
   dueDate     DateTime
-  finishDate  DateTime?
   impactScore Int
-  status      String   @default("Submited")
-  createdAt   DateTime @default(now())
-
-  followUps   SideQuestFollowUp[]
+  status      String              @default("Submited")
+  createdAt   DateTime            @default(now())
+  finishDate  DateTime?
   attachments Attachment[]
+  followUps   SideQuestFollowUp[]
 }
 
 model SideQuestFollowUp {
-  id          String    @id @default(uuid())
+  id          String       @id @default(uuid())
   sideQuestId String
-  sideQuest   SideQuest @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
-  date        DateTime  @default(now())
-  action      String
-  createdAt   DateTime  @default(now())
+  date        DateTime     @default(now())
+  action      String       @db.Text
+  createdAt   DateTime     @default(now())
   attachments Attachment[]
-}
+  sideQuest   SideQuest    @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
 
-// Removed SideQuestAttachment and SideQuestFollowUpAttachment
-// model SideQuestAttachment { ... }
-// model SideQuestFollowUpAttachment { ... }
+  @@index([sideQuestId], map: "SideQuestFollowUp_sideQuestId_fkey")
+}
