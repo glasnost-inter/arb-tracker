@@ -23,7 +23,7 @@ function Badge({ className, variant = "default", ...props }: BadgeProps) {
                     "border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-200": variant === "safe",
                     "border-transparent bg-amber-100 text-amber-800 hover:bg-amber-200": variant === "warning",
                     "border-transparent bg-rose-100 text-rose-800 hover:bg-rose-200": variant === "breached",
-                    "border-transparent bg-slate-100 text-slate-800 hover:bg-slate-200": variant === "completed",
+                    "border-transparent bg-[#EFF6FF] text-[#0052D4] hover:bg-blue-100 border-blue-100": variant === "completed",
                 },
                 className
             )}

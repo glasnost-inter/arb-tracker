@@ -22,8 +22,12 @@ type SideQuestFollowUp = {
 }
 
 export default function SideQuestFollowupHistory({ followUps }: { followUps: SideQuestFollowUp[] }) {
-    // Sort by date descending
-    const sortedFollowUps = [...followUps].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    // Sort by date descending, then by createdAt descending for items on the same day
+    const sortedFollowUps = [...followUps].sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+        if (dateDiff !== 0) return dateDiff
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
 
     // Default open the first (latest) item
     const [openItemId, setOpenItemId] = useState<string | null>(sortedFollowUps.length > 0 ? sortedFollowUps[0].id : null)

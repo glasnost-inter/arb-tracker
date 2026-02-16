@@ -26,10 +26,15 @@ model Project {
   slaTarget       DateTime
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
+  idempotencyKey  String?             @unique
   attachments     Attachment[]
   docLinks        DocumentationLink[]
   followupTasks   FollowupTask[]
   history         ProjectHistory[]
+
+  @@index([name])
+  @@index([status])
+  @@index([updatedAt])
 }
 
 model FollowupTask {
@@ -223,4 +228,19 @@ model SideQuestFollowUp {
   sideQuest   SideQuest    @relation(fields: [sideQuestId], references: [id], onDelete: Cascade)
 
   @@index([sideQuestId], map: "SideQuestFollowUp_sideQuestId_fkey")
+}
+
+enum ProjectStatus {
+  Submitted
+  In_Review       @map("In-Review")
+  Revision_Needed @map("Revision Needed")
+  Approved
+  Rejected
+  Archived
+}
+
+enum ProjectDecision {
+  Approved
+  Approved_with_Conditions @map("Approved with Conditions")
+  Rejected
 }

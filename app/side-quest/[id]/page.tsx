@@ -39,7 +39,7 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex flex-col md:flex-row md:items-center gap-4 w-full justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                                <h1 className="text-4xl font-black tracking-tighter text-foreground flex items-center gap-3">
                                     {quest.questName}
                                     <Badge variant={quest.status === 'Done' ? 'completed' : 'default'}>{quest.status}</Badge>
                                 </h1>
@@ -62,7 +62,7 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
-                                    <h3 className="font-semibold text-sm text-muted-foreground mb-1">Instruction</h3>
+                                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Instruction</h3>
                                     <div
                                         className="prose prose-sm prose-slate dark:prose-invert max-w-none"
                                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(quest.instruction) }}
@@ -71,7 +71,7 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <h3 className="font-semibold text-sm text-muted-foreground mb-1">Dates</h3>
+                                        <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Dates</h3>
                                         <div className="space-y-1 text-sm">
                                             <div className="flex justify-between">
                                                 <span>Request Date:</span>
@@ -92,7 +92,7 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-sm text-muted-foreground mb-1">People & Impact</h3>
+                                        <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">People & Impact</h3>
                                         <div className="space-y-1 text-sm">
                                             <div className="flex justify-between">
                                                 <span>Requestor:</span>
@@ -111,7 +111,7 @@ export default async function SideQuestDetailPage({ params }: { params: Promise<
                                 </div>
                                 {quest.attachments && quest.attachments.length > 0 && (
                                     <div className="mt-4 pt-4 border-t">
-                                        <h3 className="font-semibold text-sm text-muted-foreground mb-2">Attachments</h3>
+                                        <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-2 block">Attachments</h3>
                                         <AttachmentList attachments={quest.attachments} />
                                     </div>
                                 )}

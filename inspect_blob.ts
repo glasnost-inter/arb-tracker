@@ -34,7 +34,7 @@ async function main() {
             console.log('Sample Projects:', projects.map(p => p.name))
         }
 
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error reading restored blob (likely schema mismatch):", e.message)
     }
 }

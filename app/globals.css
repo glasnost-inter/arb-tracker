@@ -3,9 +3,7 @@
 
 :root {
   --background: #f8fafc;
-  /* slate-50 */
   --foreground: #0f172a;
-  /* slate-900 */
 
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -13,35 +11,34 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  --primary: #4f46e5;
-  /* indigo-600 */
+  --primary: #0052d4;
   --primary-foreground: #ffffff;
 
   --secondary: #f1f5f9;
-  /* slate-100 */
   --secondary-foreground: #0f172a;
 
   --muted: #f1f5f9;
-  /* slate-100 */
   --muted-foreground: #64748b;
-  /* slate-500 */
 
-  --accent: #f1f5f9;
-  /* slate-100 */
-  --accent-foreground: #0f172a;
+  --accent: #4364f7;
+  --accent-foreground: #ffffff;
 
-  --destructive: #ef4444;
-  /* red-500 */
+  --destructive: #ff4d4d;
   --destructive-foreground: #ffffff;
 
   --border: #e2e8f0;
-  /* slate-200 */
   --input: #e2e8f0;
-  /* slate-200 */
-  --ring: #4f46e5;
-  /* indigo-600 */
+  --ring: #0052d4;
 
-  --radius: 0.5rem;
+  --radius: 18px;
+  --ag-glass: rgba(255, 255, 255, 0.15);
+}
+
+.ag-glass-card {
+  background: var(--ag-glass);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius);
 }
 
 @theme inline {
@@ -128,6 +125,16 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv05", "cv11";
+}
+
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-weight: 500;
+  /* font-medium */
 }
 
 .modal-80 {

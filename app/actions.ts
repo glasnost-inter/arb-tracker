@@ -5,28 +5,21 @@ import { redirect } from 'next/navigation'
 import { calculateSlaTarget } from '@/lib/sla'
 import { prisma } from '@/lib/prisma'
 
-import { writeFile, copyFile, mkdir } from 'fs/promises'
+import { writeFile, copyFile, mkdir, readdir, stat } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+const execAsync = promisify(exec)
 
 async function backupDatabase() {
-    const dbPath = join(process.cwd(), 'dev.db')
-    const backupDir = join(process.cwd(), 'backups')
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const backupPath = join(backupDir, `dev_backup_${timestamp}.db`)
-
     try {
-        if (!existsSync(backupDir)) {
-            await mkdir(backupDir, { recursive: true })
-        }
-        if (existsSync(dbPath)) {
-            await copyFile(dbPath, backupPath)
-            console.log(`Database backed up to ${backupPath}`)
-        }
+        const scriptPath = join(process.cwd(), 'backup.sh')
+        await execAsync(`bash ${scriptPath}`)
+        console.log('Automated MySQL backup triggered successfully')
     } catch (error) {
-        console.error('Database backup failed:', error)
-        // We don't throw here to avoid blocking archival if backup fails, 
-        // but in a production system we might want to be stricter.
+        console.error('MySQL Database backup failed:', error)
     }
 }
 
@@ -111,7 +104,23 @@ export async function submitProject(formData: FormData) {
             taskIndex++
         }
 
-        await prisma.project.create({
+        const idempotencyKey = formData.get('idempotencyKey') as string
+
+        // Idempotency check
+        if (idempotencyKey) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const existing = await (prisma.project as any).findUnique({
+                where: { idempotencyKey }
+            })
+            if (existing) {
+                console.log('Project already exists (idempotency hit):', idempotencyKey)
+                revalidatePath('/')
+                redirect('/')
+                return { success: true, id: existing.id }
+            }
+        }
+
+        const project = await prisma.project.create({
             data: {
                 name,
                 description,
@@ -129,14 +138,24 @@ export async function submitProject(formData: FormData) {
                 status: status || 'Submitted',
                 decision,
                 mitigationNotes,
+                idempotencyKey,
                 attachments: {
                     create: savedAttachments
                 },
                 followupTasks: {
                     create: tasks
+                },
+                history: {
+                    create: {
+                        changes: JSON.stringify({ action: 'Initial Creation', project: name }),
+                        actor: pic // PIC as the initial actor
+                    }
                 }
             }
         })
+
+        console.log('Audit Log: New project created [id=%s] [name=%s]', project.id, project.name)
+
     } catch (error) {
         console.error('Failed to submit project:', error)
         return { error: 'Failed to submit project: ' + (error instanceof Error ? error.message : String(error)) }
@@ -852,5 +871,84 @@ export async function archiveSideQuest(sideQuestId: string) {
     } catch (error) {
         console.error('Failed to archive side quest:', error)
         return { error: 'Failed to archive side quest' }
+    }
+}
+
+export async function manualBackup() {
+    try {
+        const scriptPath = join(process.cwd(), 'backup.sh')
+        const { stdout, stderr } = await execAsync(`bash ${scriptPath}`)
+        console.log('Manual backup complete:', stdout)
+        if (stderr && !stdout) console.warn('Backup stderr:', stderr)
+        return { success: true, message: 'Backup created successfully' }
+    } catch (error: any) {
+        console.error('Manual backup failed:', error)
+        return { error: `Backup failed: ${error.message}` }
+    }
+}
+
+export async function getBackupFiles() {
+    try {
+        const backupDir = join(process.cwd(), 'backups')
+        if (!existsSync(backupDir)) return []
+
+        const files = await readdir(backupDir)
+        const backupFiles = await Promise.all(
+            files
+                .filter(file => file.endsWith('.sql.gz'))
+                .map(async file => {
+                    const filePath = join(backupDir, file)
+                    const s = await stat(filePath)
+                    return {
+                        name: file,
+                        size: s.size,
+                        createdAt: s.birthtime
+                    }
+                })
+        )
+
+        return backupFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    } catch (error) {
+        console.error('Failed to list backups:', error)
+        return []
+    }
+}
+
+export async function restoreBackup(filename: string) {
+    try {
+        const backupDir = join(process.cwd(), 'backups')
+        const filePath = join(backupDir, filename)
+
+        if (!existsSync(filePath)) {
+            return { error: 'Backup file not found' }
+        }
+
+        // Configuration (Matching backup.sh and docker-compose)
+        const containerName = "ifglife-mysql"
+        const dbUser = "salman_architect"
+        const dbPass = "secure_password"
+        const dbName = "arb_tracker"
+
+        console.log(`Starting restore from ${filename}...`)
+
+        // Restore command: gunzip content and pipe to mysql client inside container
+        // SOC Identification: [ARBT-RESTORE-AUTO]
+        const restoreCmd = `gzcat "${filePath}" | docker exec -i ${containerName} mysql -u${dbUser} -p${dbPass} ${dbName}`
+
+        // On Linux, use zcat. On Mac, use gzcat or zcat -c
+        // We'll try to detect or just use gzcat which worked in terminal
+        const { stdout, stderr } = await execAsync(restoreCmd)
+
+        if (stderr && !stderr.includes('Using a password on the command line interface can be insecure')) {
+            console.error('Restore error output:', stderr)
+            return { error: `Restore failed: ${stderr}` }
+        }
+
+        console.log('Restore complete:', stdout)
+        revalidatePath('/') // Revalidate everything
+        return { success: true, message: `Database restored from ${filename}` }
+    } catch (error: any) {
+        console.error('Restore failed:', error)
+        return { error: `Restore failed: ${error.message}` }
     }
 }

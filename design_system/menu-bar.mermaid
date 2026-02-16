@@ -1,0 +1,34 @@
+graph TD
+    %% Node Definitions
+    Home["Home"]
+    
+    LP["list project"]
+    LS["list side-quest"]
+    BR["backup & restore"]
+    
+    E1["entry | edit"]
+    E2["entry | edit"]
+    
+    F1["follow-up"]
+    F2["follow-up"]
+
+    %% Connections
+    Home --> LP
+    Home --> LS
+    Home --> BR
+    
+    LP --> E1
+    E1 --> F1
+    
+    LS --> E2
+    E2 --> F2
+
+    %% Styling
+    style Home fill:#3498db,stroke:#2980b9,color:#fff,stroke-width:2px
+    style LP fill:#3498db,stroke:#2980b9,color:#fff
+    style LS fill:#3498db,stroke:#2980b9,color:#fff
+    style BR fill:#3498db,stroke:#2980b9,color:#fff
+    style E1 fill:#3498db,stroke:#2980b9,color:#fff
+    style E2 fill:#3498db,stroke:#2980b9,color:#fff
+    style F1 fill:#3498db,stroke:#2980b9,color:#fff
+    style F2 fill:#3498db,stroke:#2980b9,color:#fff

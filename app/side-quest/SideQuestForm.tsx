@@ -87,19 +87,19 @@ export function SideQuestForm() {
     return (
         <Card className="w-full max-w-lg mb-8">
             <CardHeader>
-                <CardTitle>New Side Quest</CardTitle>
+                <CardTitle className="text-2xl font-black tracking-tighter">New Side Quest</CardTitle>
                 <CardDescription>Create a local task ticket.</CardDescription>
             </CardHeader>
             <CardContent>
                 {successCode && (
-                    <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md border border-green-200">
+                    <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-lg border border-green-200">
                         <p className="font-semibold">Success!</p>
                         <p>Ticket created: <strong>{successCode}</strong></p>
                     </div>
                 )}
 
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
+                    <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
                         <p className="font-semibold">Error</p>
                         <p>{error}</p>
                     </div>
@@ -214,7 +214,7 @@ export function SideQuestForm() {
 
                         {files.length > 0 && (
                             <div className="mt-2">
-                                <ul className="divide-y divide-border border rounded-md">
+                                <ul className="divide-y divide-border/50 border border-border/50 rounded-lg">
                                     {files.map((file, index) => (
                                         <li key={index} className="pl-3 pr-4 py-2 flex items-center justify-between text-xs">
                                             <div className="w-0 flex-1 flex items-center">

@@ -6,7 +6,7 @@ import { Container } from './components/ui/Container'
 import { Button } from './components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from './components/ui/Card'
 import { Badge } from './components/ui/Badge'
-import { ClipboardList, CheckCircle } from 'lucide-react'
+import { ClipboardList, CheckCircle, PlusCircle } from 'lucide-react'
 
 // Define a type for the project structure we need
 type Project = {
@@ -27,66 +27,15 @@ type Project = {
   followupTasks: { isCompleted: boolean }[]
 }
 
-async function getProjects(status?: string, decision?: string, sortByStr: string = 'updatedAt-desc', search?: string, hasPendingTasks?: boolean): Promise<Project[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {}
-  if (status) where.status = status
-  if (decision) where.decision = decision
-  if (search) {
-    where.name = {
-      contains: search,
-    }
-  }
-
-  // The hasPendingTasks filter will now be applied client-side after fetching all tasks
-  // if (hasPendingTasks) {
-  //   where.followupTasks = {
-  //     some: {
-  //       isCompleted: false
-  //     }
-  //   }
-  // }
-
-  // Parse sortBy string: "field-dir,field2-dir2"
-  const orderBy = sortByStr.split(',').map(s => {
-    const [field, dir] = s.split('-')
-    return { [field]: dir as 'asc' | 'desc' }
-  })
-
-  // Always append updatedAt for stable sorting if not present
-  if (!sortByStr.includes('updatedAt')) {
-    orderBy.push({ updatedAt: 'desc' })
-  }
-
-  const projects = await prisma.project.findMany({
-    where,
-    orderBy: orderBy,
-    include: {
-      followupTasks: {
-        select: { isCompleted: true }
-      }
-    }
-  })
-
-  // Apply hasPendingTasks filter after fetching all tasks
-  if (hasPendingTasks) {
-    return projects.filter(project => project.followupTasks.some(task => !task.isCompleted));
-  }
-
-  return projects
-}
+import { getDashboardProjects, DashboardParamsSchema } from '@/lib/dashboard-service'
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const resolvedSearchParams = await searchParams
-  /* eslint-disable prefer-const */
-  let { status, decision, sortBy, hasPendingTasks } = resolvedSearchParams
 
-  status = typeof status === 'string' ? status : undefined
-  decision = typeof decision === 'string' ? decision : undefined
-  const sortByStr = typeof sortBy === 'string' ? sortBy : 'updatedAt-desc'
-  const showPendingOnly = hasPendingTasks === 'true'
+  // Use Zod for validation
+  const params = DashboardParamsSchema.parse(resolvedSearchParams)
 
-  const projects = await getProjects(status, decision, sortByStr, undefined, showPendingOnly)
+  const projects = await getDashboardProjects(params)
 
   const getSlaBadgeVariant = (status: SlaStatus) => {
     switch (status) {
@@ -107,18 +56,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     <div className="min-h-screen bg-background py-10">
       <Container>
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">ARB Tracker Dashboard</h1>
-          <div className="flex gap-2">
-            <Link href="/side-quest">
-              <Button variant="outline">Side Quest</Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant="outline">Admin</Button>
-            </Link>
-            <Link href="/submission">
-              <Button>New Submission</Button>
-            </Link>
-          </div>
+          <h1 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-[#0052D4] to-[#4364F7] bg-clip-text text-transparent">ARB Tracker Dashboard</h1>
+          <Link href="/submission">
+            <Button className="flex gap-2 font-bold shadow-lg bg-gradient-to-r from-[#0052D4] to-[#4364F7] hover:opacity-90 transition-opacity">
+              <PlusCircle className="h-4 w-4" />
+              New Project
+            </Button>
+          </Link>
         </div>
 
         <ProjectFilters />
@@ -189,9 +133,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             )
           })}
           {projects.length === 0 && (
-            <div className="text-center py-12 bg-card rounded-lg border border-dashed">
-              <p className="text-muted-foreground">No submissions found matching your filters.</p>
-              <Button variant="link" className="mt-2">Clear all filters</Button>
+            <div className="text-center py-12 bg-card rounded-lg border border-border/50 border-dashed">
+              <p className="text-muted-foreground font-medium">No projects found with current filter. Please adjust your criteria.</p>
+              <Link href="/">
+                <Button variant="link" className="mt-2 text-primary">
+                  Clear all filters
+                </Button>
+              </Link>
             </div>
           )}
         </div>

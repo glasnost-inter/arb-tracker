@@ -1,0 +1,11 @@
+graph TD
+    A([Mulai]) --> B[Buka Halaman Executive Side Quest Tracker]
+    B --> C[Klik 'View Details' pada Side Quest]
+    C --> D[Masuk ke Halaman Detail Side Quest]
+    D --> E[Isi Form 'Add Follow-up']
+    E --> F[Klik Tombol 'Add Follow-up']
+    F --> G{Berhasil?}
+    G -- Ya --> H[Form Reset & Data Ditambahkan ke History]
+    G -- Tidak --> I[Tampilkan Error]
+    I --> E
+    H --> J([Selesai])

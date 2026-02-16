@@ -65,6 +65,7 @@ export function SideQuestFollowUpForm({ sideQuestId }: { sideQuestId: string }) 
             setError(res.error)
         } else if (res.success) {
             form.reset()
+            setAction('') // Reset rich text editor
             setFiles([]) // Reset files
             router.refresh()
         }

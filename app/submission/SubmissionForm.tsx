@@ -133,19 +133,19 @@ function TaskItem({
                 </div>
 
                 <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1 block">Action / Completion Notes</Label>
+                    <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Action / Completion Notes</Label>
                     <RichTextEditor
                         value={(task as any).action || ''}
                         onChange={(val) => updateTask(index, 'action' as any, val)}
                         placeholder="Detail what was done for this task..."
-                        className="min-h-[120px] bg-background border rounded-md"
+                        className="min-h-[120px] bg-background border border-border/50 rounded-lg"
                     />
                     <input type="hidden" name={`tasks[${index}].action`} value={(task as any).action || ''} />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4 items-start">
                     <div>
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1 block">Due Date</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Due Date</Label>
                         <DatePicker
                             id={`task-date-${index}`}
                             name={`tasks[${index}].dueDate`}
@@ -156,7 +156,7 @@ function TaskItem({
                     </div>
 
                     <div>
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1 block">Evidence / Attachments</Label>
+                        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Evidence / Attachments</Label>
                         <ImageUploaderWithCaption
                             onUpload={async (file, caption) => {
                                 const newFile = file as any
@@ -171,13 +171,13 @@ function TaskItem({
 
                 {/* Attachments List */}
                 {(task.attachments && task.attachments.length > 0 || task.existingAttachments && task.existingAttachments.length > 0) && (
-                    <div className="p-3 bg-background/50 rounded-md border border-dashed text-xs space-y-2">
+                    <div className="p-3 bg-background/50 rounded-lg border border-border/50 border-dashed text-xs space-y-2">
                         {task.existingAttachments && task.existingAttachments.length > 0 && (
                             <div className="space-y-1">
-                                <p className="text-[10px] text-muted-foreground font-semibold">Saved Evidence:</p>
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 pb-1">Saved Evidence:</p>
                                 <div className="flex flex-wrap gap-2">
                                     {task.existingAttachments.map(att => (
-                                        <div key={att.id} className="bg-muted px-2 py-1 rounded flex items-center gap-1 border border-border/50">
+                                        <div key={att.id} className="bg-muted px-2 py-1 rounded-lg flex items-center gap-1 border border-border/50">
                                             <svg className="w-3 h-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                                             </svg>
@@ -189,7 +189,7 @@ function TaskItem({
                         )}
                         {task.attachments && task.attachments.length > 0 && (
                             <div className="space-y-1">
-                                <p className="text-[10px] text-primary font-semibold">New Pending Evidence:</p>
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-primary/80 pb-1">New Pending Evidence:</p>
                                 <ul className="space-y-1">
                                     {task.attachments.map((file, fIndex) => (
                                         <li key={fIndex} className="flex justify-between items-center bg-primary/5 p-1 rounded">
@@ -249,7 +249,8 @@ function TaskItem({
     )
 }
 
-export default function SubmissionForm({ squads, initialData, recentDocLinks }: { squads: Squad[], initialData?: ProjectData, recentDocLinks?: string[] }) {
+export default function SubmissionForm({ squads, initialData, recentDocLinks, idempotencyKey: propIdempotencyKey }: { squads: Squad[], initialData?: ProjectData, recentDocLinks?: string[], idempotencyKey?: string }) {
+    const [idempotencyKey] = useState(() => propIdempotencyKey || (!initialData ? crypto.randomUUID() : ''))
     // ... rest of component
     const [slaDuration, setSlaDuration] = useState(initialData?.slaDuration || 5)
     const [files, setFiles] = useState<File[]>([])
@@ -411,6 +412,7 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
+            {idempotencyKey && <input type="hidden" name="idempotencyKey" value={idempotencyKey} />}
             <AutoSuggest onApply={handleAutoFill} />
 
             <Card>
@@ -658,7 +660,7 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks }: 
                     {files.length > 0 && (
                         <div className="mt-4">
                             <h4 className="text-sm font-medium text-foreground">New Files to Upload:</h4>
-                            <ul className="mt-2 divide-y divide-border border rounded-md">
+                            <ul className="mt-2 divide-y divide-border/50 border border-border/50 rounded-lg">
                                 {files.map((file, index) => (
                                     <li key={index} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
                                         <div className="w-0 flex-1 flex items-center">

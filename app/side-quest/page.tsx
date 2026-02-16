@@ -8,6 +8,7 @@ import { getSideQuests } from '../actions'
 import SideQuestFilters from './components/SideQuestFilters'
 
 import DOMPurify from 'isomorphic-dompurify'
+import { PlusCircle } from 'lucide-react'
 
 export default async function SideQuestPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     const resolvedSearchParams = await searchParams
@@ -25,19 +26,14 @@ export default async function SideQuestPage({ searchParams }: { searchParams: Pr
             <Container>
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <Link href="/">
-                            <Button variant="ghost" className="pl-0 hover:bg-transparent hover:text-primary mb-2">
-                                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                                Back to Dashboard
-                            </Button>
-                        </Link>
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">Executive Side-Quest Tracker</h1>
+                        <h1 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-[#0052D4] to-[#4364F7] bg-clip-text text-transparent">Executive Side-Quest Tracker</h1>
                         <p className="text-muted-foreground mt-2">Manage and track ad-hoc tasks.</p>
                     </div>
                     <Link href="/side-quest/new">
-                        <Button>New Side Quest</Button>
+                        <Button className="flex gap-2 font-bold shadow-lg bg-gradient-to-r from-[#0052D4] to-[#4364F7] hover:opacity-90 transition-opacity">
+                            <PlusCircle className="h-4 w-4" />
+                            New Side Quest
+                        </Button>
                     </Link>
                 </div>
 
@@ -76,21 +72,21 @@ export default async function SideQuestPage({ searchParams }: { searchParams: Pr
                                     />
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                         <div className="flex flex-col">
-                                            <span className="font-semibold text-foreground">Request Date:</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Request Date:</span>
                                             <span className="text-muted-foreground">{new Date(quest.requestDate).toLocaleDateString()}</span>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold text-foreground">Due Date:</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Due Date:</span>
                                             <span className={new Date(quest.dueDate) < new Date() && quest.status !== 'Done' ? 'text-red-500' : 'text-muted-foreground'}>
                                                 {new Date(quest.dueDate).toLocaleDateString()}
                                             </span>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold text-foreground">Requestor:</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Requestor:</span>
                                             <span className="text-muted-foreground">{quest.requestor}</span>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold text-foreground">Executor:</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 block">Executor:</span>
                                             <span className="text-muted-foreground">{quest.executor || '-'}</span>
                                         </div>
                                     </div>

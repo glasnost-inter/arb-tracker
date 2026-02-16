@@ -1,10 +1,24 @@
 graph TD
-    A([start]) --> B[open page project submission]
-    B --> C[/input gambar / text/ pdf]
-    C --> D[berikan sugest dari akan masuk ke field mana. buatkan preview field untuk menentukan apakah setuju atau mau ada edit]
-    D --> E{setuju?}
+    A([Mulai]) --> B[Buka Halaman Submission]
+    B --> C{Klik 'Auto-Fill with AI'?}
+    C -- Ya --> D[/Upload Gambar atau PDF/]
+    C -- Tidak --> E[Input Manual]
     
-    E -- ya --> F[simpan data project]
-    E -- tidak --> C
+    D --> F[Proses AI Analysis /api/analyze]
+    F --> G{Hasil API?}
     
-    F --> G([selesai])
+    G -- Sukses --> H[Tampilkan Preview Data]
+    G -- Error 429 (Quota Habis) --> I[Peringatan: Kuota AI Habis]
+    G -- Error Lainnya --> J[Peringatan: Error System]
+    
+    I --> E
+    J --> D
+    
+    H --> K{Apply ke Form?}
+    K -- Ya --> L[Auto-Fill Form Fields]
+    K -- Ganti File --> D
+    K -- Batal --> E
+    
+    L --> E
+    E --> M[Klik Simpan Project]
+    M --> N([Selesai])

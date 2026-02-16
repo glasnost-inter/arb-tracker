@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+// import * as dotenv from 'dotenv';
+// dotenv.config();
 
 async function listModels() {
     const apiKey = process.env.GOOGLE_API_KEY;

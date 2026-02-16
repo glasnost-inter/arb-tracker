@@ -6,13 +6,15 @@ import { Card, CardContent } from './ui/Card'
 import { Label } from './ui/Label'
 import { Select } from './ui/Select'
 import { Button } from './ui/Button'
-import { X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, Plus, Search } from 'lucide-react'
+import { Input } from './ui/Input'
 
 // Available sort fields
 const SORT_FIELDS = [
     { key: 'updatedAt', label: 'Last Updated' },
     { key: 'createdAt', label: 'Date Created' },
     { key: 'ownerSquad', label: 'Owner Squad' },
+    { key: 'name', label: 'Project Name' },
     { key: 'status', label: 'Status' },
     { key: 'decision', label: 'Decision' },
 ]
@@ -23,8 +25,9 @@ export default function ProjectFilters() {
     const pathname = usePathname()
 
     const [sorts, setSorts] = useState<{ field: string, dir: string }[]>([])
+    const [searchQuery, setSearchQuery] = useState('')
 
-    // Sync sorts from URL on mount/update
+    // Sync sorts and search from URL on mount/update
     useEffect(() => {
         const sortByParam = searchParams.get('sortBy')
         if (sortByParam) {
@@ -37,7 +40,31 @@ export default function ProjectFilters() {
             // Default sort
             setSorts([{ field: 'updatedAt', dir: 'desc' }])
         }
+
+        const currentSearch = searchParams.get('search') || ''
+        setSearchQuery(currentSearch)
     }, [searchParams])
+
+    // Debouncing logic for search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery !== (searchParams.get('search') || '')) {
+                updateFilter('search', searchQuery)
+            }
+        }, 300)
+
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
+    const handleSearch = () => {
+        updateFilter('search', searchQuery)
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSearch()
+        }
+    }
 
     const updateFilter = (key: string, value: string) => {
         const params = new URLSearchParams(searchParams)
@@ -92,6 +119,26 @@ export default function ProjectFilters() {
         <Card className="mb-8">
             <CardContent className="pt-6 space-y-6">
 
+                <div className="flex flex-wrap gap-6 items-end pb-4 border-b border-border/50">
+                    <div className="grid w-full max-w-sm gap-1.5">
+                        <Label htmlFor="search-input">Search Project Name</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                id="search-input"
+                                placeholder="Filter by name..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                className="flex-1"
+                            />
+                            <Button onClick={handleSearch} className="flex gap-2">
+                                <Search className="h-4 w-4" />
+                                Search
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Static Filters Section */}
                 <div className="flex flex-wrap gap-6 items-end">
                     <div className="grid w-full max-w-xs gap-1.5">
@@ -124,10 +171,13 @@ export default function ProjectFilters() {
                         </Select>
                     </div>
 
-                    {(searchParams.get('status') || searchParams.get('decision')) && (
+                    {(searchParams.get('status') || searchParams.get('decision') || searchParams.get('search')) && (
                         <Button
                             variant="ghost"
-                            onClick={() => router.push(pathname)}
+                            onClick={() => {
+                                router.push(pathname)
+                                setSearchQuery('')
+                            }}
                             className="mb-0.5"
                         >
                             Clear Filters
@@ -149,7 +199,7 @@ export default function ProjectFilters() {
                 </div>
 
                 {/* Dynamic Sorting Section */}
-                <div className="border-t pt-4">
+                <div className="border-t border-border/50 pt-4">
                     <Label className="mb-3 block text-sm font-medium">Sorting</Label>
                     <div className="space-y-3">
                         {sorts.map((sort, index) => (

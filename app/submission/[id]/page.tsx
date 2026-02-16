@@ -41,7 +41,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl font-bold tracking-tight text-foreground">{project.name}</h1>
+                            <h1 className="text-4xl font-black tracking-tighter text-foreground">{project.name}</h1>
                             <Badge variant={getStatusVariant(project.status)} className="text-sm px-2.5 py-0.5">
                                 {project.status}
                             </Badge>
@@ -51,9 +51,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Link href="/">
-                            <Button variant="ghost">Back</Button>
-                        </Link>
                         <Link href={`/submission/${project.id}/edit`}>
                             <Button variant="outline">Edit Project</Button>
                         </Link>
@@ -133,7 +130,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </CardHeader>
                             <CardContent>
                                 {history && history.length > 0 ? (
-                                    <div className="relative border-l border-muted ml-3 space-y-6">
+                                    <div className="relative border-l border-border/50 ml-3 space-y-6">
                                         {history.map((log) => {
                                             let changes: { field: string, old: string, new: string }[] = []
                                             try {
@@ -173,7 +170,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                                         </span>
                                                         <div className="text-sm space-y-2 mt-1">
                                                             {changes.map((change, i) => (
-                                                                <div key={i} className="bg-muted/50 p-2 rounded-md">
+                                                                <div key={i} className="bg-muted/50 p-2 rounded-lg">
                                                                     <span className="font-semibold text-foreground">{change.field}:</span>{' '}
                                                                     <span className="text-destructive line-through">{change.old}</span>{' '}
                                                                     <span className="text-muted-foreground">→</span>{' '}
@@ -201,11 +198,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">PIC</p>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">PIC</p>
                                     <p className="text-sm font-medium">{project.pic}</p>
                                 </div>
-                                <div className="border-t pt-3">
-                                    <p className="text-sm font-medium text-muted-foreground">Documentation</p>
+                                <div className="border-t border-border/50 pt-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Documentation</p>
                                     {project.docLinks && project.docLinks.length > 0 ? (
                                         <ul className="list-disc list-inside">
                                             {project.docLinks.map((link: { id: string, url: string }) => (
@@ -220,8 +217,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                         <p className="text-sm">-</p>
                                     )}
                                 </div>
-                                <div className="border-t pt-3">
-                                    <p className="text-sm font-medium text-muted-foreground">Submission Date</p>
+                                <div className="border-t border-border/50 pt-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Submission Date</p>
                                     <p className="text-sm">{new Date(project.submissionDate).toLocaleDateString()}</p>
                                 </div>
                             </CardContent>
@@ -233,7 +230,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Target SLA</p>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Target SLA</p>
                                     <div className="flex items-center gap-2 mt-1">
                                         <p className="text-sm font-medium">{new Date(project.slaTarget).toLocaleDateString()}</p>
                                         <Badge variant="outline" className="text-xs font-normal">
@@ -241,16 +238,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                         </Badge>
                                     </div>
                                 </div>
-                                <div className="border-t pt-3">
-                                    <p className="text-sm font-medium text-muted-foreground">Review Session</p>
+                                <div className="border-t border-border/50 pt-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Review Session</p>
                                     <p className="text-sm">{project.reviewDate ? new Date(project.reviewDate).toLocaleDateString() : '-'}</p>
                                 </div>
-                                <div className="border-t pt-3">
-                                    <p className="text-sm font-medium text-muted-foreground">Decision Date</p>
+                                <div className="border-t border-border/50 pt-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Decision Date</p>
                                     <p className="text-sm">{project.decisionDate ? new Date(project.decisionDate).toLocaleDateString() : '-'}</p>
                                 </div>
                                 <div className="border-t pt-3">
-                                    <p className="text-sm font-medium text-muted-foreground">Decision</p>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Decision</p>
                                     <p className="text-sm font-medium">{project.decision || '-'}</p>
                                 </div>
                             </CardContent>
