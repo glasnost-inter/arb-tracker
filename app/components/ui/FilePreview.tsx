@@ -17,17 +17,47 @@ interface FilePreviewProps {
 
 export function FilePreview({ isOpen, onOpenChange, file, readOnly = true }: FilePreviewProps) {
     const [zoom, setZoom] = React.useState(1)
+    const [pan, setPan] = React.useState({ x: 0, y: 0 })
+    const [activeButton, setActiveButton] = React.useState<string | null>(null)
 
-    // Reset zoom when file changes or modal opens
+    // Reset zoom and pan when file changes or modal opens
     React.useEffect(() => {
-        if (isOpen) setZoom(1)
+        if (isOpen) {
+            setZoom(1)
+            setPan({ x: 0, y: 0 })
+            setActiveButton(null)
+        }
     }, [isOpen, file?.path])
 
     if (!file) return null
 
+    const handlePan = (dx: number, dy: number, name: string) => {
+        setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }))
+        setActiveButton(name)
+    }
+
+    const handleZoom = (delta: number, name: string) => {
+        setZoom(z => delta > 0 ? Math.min(5, z + delta) : Math.max(0.1, z + delta))
+        setActiveButton(name)
+    }
+
+    const handleReset = () => {
+        setZoom(1)
+        setPan({ x: 0, y: 0 })
+        setActiveButton('reset')
+    }
+
     const isImage = (filename: string) => /\.(jpg|jpeg|png|gif|webp)$/i.test(filename)
     const isPdf = (filename: string) => /\.pdf$/i.test(filename)
     const isDrawio = (filename: string) => filename.endsWith('.drawio')
+
+    const getButtonStyle = (name: string) => {
+        const base = "h-10 w-10 p-0 flex items-center justify-center transition-all duration-200"
+        if (activeButton === name) {
+            return `${base} border-2 border-orange-500 bg-orange-50 text-orange-600 shadow-sm`
+        }
+        return `${base} hover:bg-muted`
+    }
 
     return (
         <Sheet open={isOpen} onOpenChange={onOpenChange} side="right" className="w-screen max-w-none sm:max-w-none border-l-0">
@@ -47,45 +77,98 @@ export function FilePreview({ isOpen, onOpenChange, file, readOnly = true }: Fil
                 <div className="flex-1 w-full overflow-hidden flex flex-col bg-muted/30 relative">
                     {/* Preview Area */}
                     <div className="flex-1 relative flex items-center justify-center overflow-auto h-full">
-                        {/* Zoom Controls (Floating) */}
+                        {/* 3x3 Navigation D-Pad (Floating) */}
                         {isImage(file.filename) && (
-                            <div className="absolute top-4 right-4 z-10 flex gap-1 bg-background/80 backdrop-blur-md p-1 rounded-lg shadow-md border">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setZoom(z => Math.max(0.1, z - 0.2))}
-                                    className="h-8 w-8 p-0"
-                                    title="Zoom Out"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13 10H7" />
-                                    </svg>
-                                </Button>
-                                <span className="flex items-center text-[10px] font-bold w-10 justify-center text-muted-foreground">
+                            <div className="absolute top-6 right-6 z-10 bg-background/90 backdrop-blur-md p-1.5 rounded-xl shadow-xl border border-border/50 select-none">
+                                <div className="grid grid-cols-3 gap-1">
+                                    {/* Row 1 */}
+                                    <div />
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => handlePan(0, -50, 'up')}
+                                        className={getButtonStyle('up')}
+                                        aria-label="Geser ke Atas"
+                                        title="Pan Up"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                                        </svg>
+                                    </Button>
+                                    <div />
+
+                                    {/* Row 2 */}
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => handlePan(-50, 0, 'left')}
+                                        className={getButtonStyle('left')}
+                                        aria-label="Geser ke Kiri"
+                                        title="Pan Left"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                                        </svg>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => handleZoom(0.2, 'zoom-in')}
+                                        className={getButtonStyle('zoom-in')}
+                                        aria-label="Perbesar Dokumen"
+                                        title="Zoom In"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                        </svg>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => handlePan(50, 0, 'right')}
+                                        className={getButtonStyle('right')}
+                                        aria-label="Geser ke Kanan"
+                                        title="Pan Right"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                        </svg>
+                                    </Button>
+
+                                    {/* Row 3 */}
+                                    <Button
+                                        variant="ghost"
+                                        onClick={handleReset}
+                                        className={getButtonStyle('reset')}
+                                        aria-label="Atur Ulang Tampilan"
+                                        title="Home / Reset"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                                        </svg>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => handlePan(0, 50, 'down')}
+                                        className={getButtonStyle('down')}
+                                        aria-label="Geser ke Bawah"
+                                        title="Pan Down"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => handleZoom(-0.2, 'zoom-out')}
+                                        className={getButtonStyle('zoom-out')}
+                                        aria-label="Perkecil Tampilan"
+                                        title="Zoom Out"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
+                                        </svg>
+                                    </Button>
+                                </div>
+                                <div className="mt-2 text-center text-[10px] font-bold text-muted-foreground tabular-nums border-t pt-2">
                                     {Math.round(zoom * 100)}%
-                                </span>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setZoom(z => Math.min(5, z + 0.2))}
-                                    className="h-8 w-8 p-0"
-                                    title="Zoom In"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10 7v6m3-3H7" />
-                                    </svg>
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setZoom(1)}
-                                    className="h-8 w-8 p-0"
-                                    title="Reset Zoom"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                                    </svg>
-                                </Button>
+                                </div>
                             </div>
                         )}
 
@@ -110,7 +193,7 @@ export function FilePreview({ isOpen, onOpenChange, file, readOnly = true }: Fil
                                     src={file.path}
                                     alt="Preview"
                                     className="max-w-none transition-transform duration-200 ease-out origin-center select-none shadow-lg rounded-sm"
-                                    style={{ transform: `scale(${zoom})`, objectFit: 'contain' }}
+                                    style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, objectFit: 'contain' }}
                                     onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         target.style.display = 'none';
@@ -165,3 +248,4 @@ export function FilePreview({ isOpen, onOpenChange, file, readOnly = true }: Fil
         </Sheet>
     )
 }
+

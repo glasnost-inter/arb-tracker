@@ -1,0 +1,24 @@
+graph TD
+    A([start]) --> B[open page ARB Tracker Dashboard]
+    B --> C[pilih project dengan click tombol view details]
+    C --> D[tampilkan attachment yang terkait dengan project]
+    D --> E{Klik Attachment?}
+    E -- Ya --> F[Tampilkan Modal Attachment Preview]
+    E -- Tidak --> G([selesai])
+
+    subgraph PreviewModal ["Modal Attachment Preview - Controls (3x3 Grid)"]
+        direction TB
+        Row1[ ] --- PanUp[Pan Up] --- Row1_right[ ]
+        PanLeft[Pan Left] --- ZoomIn[Zoom In +] --- PanRight[Pan Right]
+        Reset[Reset / Home View] --- PanDown[Pan Down] --- ZoomOut[Zoom Out -]
+    end
+
+    F --> PreviewModal
+    PreviewModal --> G
+
+    %% Styling
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef active fill:#fff,stroke:#ff8c00,stroke-width:4px;
+    
+    class ZoomOut active;
+    class PanUp,PanDown,PanLeft,PanRight,ZoomIn,Reset default;
