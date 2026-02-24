@@ -147,7 +147,7 @@ export async function submitProject(formData: FormData) {
                 },
                 history: {
                     create: {
-                        changes: JSON.stringify({ action: 'Initial Creation', project: name }),
+                        changes: JSON.stringify([{ field: 'Action', old: '-', new: 'Initial Creation' }]),
                         actor: pic // PIC as the initial actor
                     }
                 }

@@ -169,14 +169,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                                                             {new Date(log.timestamp).toLocaleString()} by {log.actor || 'System'}
                                                         </span>
                                                         <div className="text-sm space-y-2 mt-1">
-                                                            {changes.map((change, i) => (
+                                                            {Array.isArray(changes) ? changes.map((change, i) => (
                                                                 <div key={i} className="bg-muted/50 p-2 rounded-lg">
                                                                     <span className="font-semibold text-foreground">{change.field}:</span>{' '}
                                                                     <span className="text-destructive line-through">{change.old}</span>{' '}
                                                                     <span className="text-muted-foreground">→</span>{' '}
                                                                     <span className="text-emerald-600 font-medium">{change.new}</span>
                                                                 </div>
-                                                            ))}
+                                                            )) : (
+                                                                <div className="bg-muted/50 p-2 rounded-lg">
+                                                                    <span className="text-muted-foreground">{JSON.stringify(changes)}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

@@ -3,6 +3,13 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 const squads = [
+    'All - Squad',
+    'AO - Claim',
+    'AO - Digital Care',
+    'AO - Fraud',
+    'AO - Lifehub',
+    'AO - NB',
+    'AO - PS',
     'Core - AAS',
     'Core - DCMS',
     'Core - Legacy',
@@ -21,13 +28,7 @@ const squads = [
     'Finance',
     'IT & Architect - Architect',
     'IT & Architect - Development',
-    'IT & Architect - Infra',
-    'AO - Claim',
-    'AO - Digital Care',
-    'AO - Fraud',
-    'AO - Lifehub',
-    'AO - NB',
-    'AO - PS'
+    'IT & Architect - Infra.'
 ]
 
 async function main() {
