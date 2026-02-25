@@ -337,17 +337,7 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks, id
         setDocLinks(newLinks)
     }
 
-    // Handle paste event
-    useEffect(() => {
-        const handlePaste = (e: ClipboardEvent) => {
-            if (e.clipboardData && e.clipboardData.files.length > 0) {
-                const pastedFiles = Array.from(e.clipboardData.files)
-                setFiles(prev => [...prev, ...pastedFiles].slice(0, 20))
-            }
-        }
-        window.addEventListener('paste', handlePaste)
-        return () => window.removeEventListener('paste', handlePaste)
-    }, [])
+    // (Removed duplicate handle paste event)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -654,6 +644,7 @@ export default function SubmissionForm({ squads, initialData, recentDocLinks, id
                             }}
                             triggerText="Paste image or click to upload"
                             className="w-full"
+                            enableGlobalPaste={true}
                         />
                     </div>
 

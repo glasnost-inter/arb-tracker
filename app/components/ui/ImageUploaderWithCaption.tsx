@@ -11,9 +11,10 @@ interface ImageUploaderWithCaptionProps {
     onUpload: (file: File, caption: string) => Promise<void>
     triggerText?: string
     className?: string
+    enableGlobalPaste?: boolean
 }
 
-export function ImageUploaderWithCaption({ onUpload, triggerText = "Paste or Upload Image", className }: ImageUploaderWithCaptionProps) {
+export function ImageUploaderWithCaption({ onUpload, triggerText = "Paste or Upload Image", className, enableGlobalPaste = false }: ImageUploaderWithCaptionProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -23,6 +24,8 @@ export function ImageUploaderWithCaption({ onUpload, triggerText = "Paste or Upl
 
     // Handle Paste Event
     useEffect(() => {
+        if (!enableGlobalPaste) return;
+
         const handlePaste = (e: ClipboardEvent) => {
             if (e.clipboardData && e.clipboardData.files.length > 0) {
                 const file = e.clipboardData.files[0]
@@ -33,7 +36,7 @@ export function ImageUploaderWithCaption({ onUpload, triggerText = "Paste or Upl
         }
         window.addEventListener('paste', handlePaste)
         return () => window.removeEventListener('paste', handlePaste)
-    }, [])
+    }, [enableGlobalPaste])
 
     const handleFileSelection = (file: File) => {
         setSelectedFile(file)

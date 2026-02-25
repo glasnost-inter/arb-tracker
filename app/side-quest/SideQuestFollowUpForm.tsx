@@ -19,17 +19,7 @@ export function SideQuestFollowUpForm({ sideQuestId }: { sideQuestId: string }) 
     const [action, setAction] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    // Handle paste event
-    useEffect(() => {
-        const handlePaste = (e: ClipboardEvent) => {
-            if (e.clipboardData && e.clipboardData.files.length > 0) {
-                const pastedFiles = Array.from(e.clipboardData.files)
-                setFiles(prev => [...prev, ...pastedFiles].slice(0, 20))
-            }
-        }
-        window.addEventListener('paste', handlePaste)
-        return () => window.removeEventListener('paste', handlePaste)
-    }, [])
+    // (Removed duplicate paste event handler)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -110,6 +100,7 @@ export function SideQuestFollowUpForm({ sideQuestId }: { sideQuestId: string }) 
                             }}
                             triggerText="Paste image or click to upload"
                             className="w-full"
+                            enableGlobalPaste={true}
                         />
                     </div>
 
