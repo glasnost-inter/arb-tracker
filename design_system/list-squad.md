@@ -26,3 +26,4 @@
 * IT & Architect - Architect
 * IT & Architect - Development
 * IT & Architect - Infra
+* Artificial Intelligence

@@ -28,7 +28,8 @@ const squads = [
     'Finance',
     'IT & Architect - Architect',
     'IT & Architect - Development',
-    'IT & Architect - Infra.'
+    'IT & Architect - Infra',
+    'Artificial Intelligence'
 ]
 
 async function main() {
