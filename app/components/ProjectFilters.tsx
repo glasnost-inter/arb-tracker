@@ -171,7 +171,41 @@ export default function ProjectFilters() {
                         </Select>
                     </div>
 
-                    {(searchParams.get('status') || searchParams.get('decision') || searchParams.get('search')) && (
+                    <div className="flex gap-4 w-full flex-wrap">
+                        <div className="grid w-full max-w-[150px] gap-1.5">
+                            <Label htmlFor="date-field-filter">Date Field</Label>
+                            <Select
+                                id="date-field-filter"
+                                value={searchParams.get('dateField') || ''}
+                                onChange={(e) => updateFilter('dateField', e.target.value)}
+                            >
+                                <option value="">None</option>
+                                <option value="createdAt">Date Created</option>
+                                <option value="updatedAt">Last Updated</option>
+                                <option value="slaTarget">SLA Target / Followup</option>
+                            </Select>
+                        </div>
+                        <div className="grid w-full max-w-[150px] gap-1.5">
+                            <Label htmlFor="start-date-filter">Start Date</Label>
+                            <Input
+                                id="start-date-filter"
+                                type="date"
+                                value={searchParams.get('startDate') || ''}
+                                onChange={(e) => updateFilter('startDate', e.target.value)}
+                            />
+                        </div>
+                        <div className="grid w-full max-w-[150px] gap-1.5">
+                            <Label htmlFor="end-date-filter">End Date</Label>
+                            <Input
+                                id="end-date-filter"
+                                type="date"
+                                value={searchParams.get('endDate') || ''}
+                                onChange={(e) => updateFilter('endDate', e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {(searchParams.get('status') || searchParams.get('decision') || searchParams.get('search') || searchParams.get('dateField') || searchParams.get('startDate') || searchParams.get('endDate')) && (
                         <Button
                             variant="ghost"
                             onClick={() => {

@@ -107,12 +107,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   </div>
                 </CardHeader>
                 <CardContent className="pb-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     {project.decision && (
                       <div>
                         <span className="font-semibold text-foreground">Decision:</span> <span className="text-muted-foreground">{project.decision}</span>
                       </div>
                     )}
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">Created:</span>
+                      <span className="text-muted-foreground">{project.createdAt.toLocaleDateString()}</span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-foreground">SLA Target:</span>
                       <Badge variant={getSlaBadgeVariant(slaStatus)}>

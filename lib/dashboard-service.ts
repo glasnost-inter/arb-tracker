@@ -8,12 +8,15 @@ export const DashboardParamsSchema = z.object({
     sortBy: z.string().default('updatedAt-desc'),
     search: z.string().optional(),
     hasPendingTasks: z.preprocess((val) => val === 'true', z.boolean()).default(false),
+    dateField: z.enum(['createdAt', 'updatedAt', 'slaTarget']).optional().catch(undefined),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
 })
 
 export type DashboardParams = z.infer<typeof DashboardParamsSchema>
 
 export async function getDashboardProjects(params: DashboardParams) {
-    const { status, decision, sortBy, search, hasPendingTasks } = params
+    const { status, decision, sortBy, search, hasPendingTasks, dateField, startDate, endDate } = params
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {}
@@ -22,6 +25,17 @@ export async function getDashboardProjects(params: DashboardParams) {
     if (search) {
         where.name = {
             contains: search,
+        }
+    }
+
+    // Date Range Logic
+    if (dateField && (startDate || endDate)) {
+        where[dateField] = {};
+        if (startDate) {
+            where[dateField].gte = new Date(`${startDate}T00:00:00.000Z`);
+        }
+        if (endDate) {
+            where[dateField].lte = new Date(`${endDate}T23:59:59.999Z`);
         }
     }
 
